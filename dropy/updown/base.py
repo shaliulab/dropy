@@ -147,10 +147,13 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
 
     # it's NOT available on dropbox.com -> upload
     elif yesno('Upload %s' % name, True, args):
-        upload(
-            dbx, fullname, folder, subfolder, name,
-            shared=shared
-        )
+        if os.path.exists(fullname):
+            upload(
+                dbx, fullname, folder, subfolder, name,
+                shared=shared
+            )
+        else:
+            logger.warning(f"{fullname} does not exist")
 
         
 def updown(dbx, rootdir, folder, yes, no, default):
