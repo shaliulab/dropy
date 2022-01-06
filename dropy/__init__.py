@@ -64,7 +64,7 @@ class DropboxDownloader(SyncMixin):
         while len(folder_result.entries) == LIMIT:
             logger.debug("calling list_folder_continue. length of entries = {len(entries)}")
             folder_result = self.dbx.files_list_folder_continue(folder_result.cursor)
-            entries.append(folder_result.entries)
+            entries += folder_result.entries
         
         dirs = []
         files = []
