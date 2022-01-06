@@ -2,6 +2,7 @@ import argparse
 import logging
 import re
 import os.path
+import pickle
 import numpy as np
 import pandas as pd
 import joblib
@@ -14,7 +15,7 @@ import dropy
 logger = logging.getLogger(__name__)
 
 def get_parser(ap=None):
-    ap = oauth_get_parser(ap)    
+    ap = oauth_get_parser(ap)
     ap.add_argument("--folder", required=True) # "/Data/ethoscope/2022-01-04_ethoscope_data/results"
     ap.add_argument("--rootdir", required=True) # "/Data/ethoscope/2022-01-04_ethoscope_data/results"
     ap.add_argument("--metadata")
@@ -22,13 +23,13 @@ def get_parser(ap=None):
 
 
 def unnest(input, output):
-    
+
     for element in input:
         if isinstance(element, str):
             output.append(element)
         elif isinstance(element, list):
             unnest(element, output)
-    
+
     return output
 
 def get_machine_name(db_file):
@@ -42,7 +43,7 @@ def get_machine_name(db_file):
 
 def get_date(db_file):
 
-    match = re.match(".*/([0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2})/.*", db_file)
+    match = re.match(".*/([0-9]{4}-[0-9]{2}-[0-9]{2})_[0-9]{2}-[0-9]{2}-[0-9]{2}/.*", db_file)
     if match:
         date = match.group(1)
         return date
@@ -86,26 +87,25 @@ def main(ap=None, args=None):
 
     print(f"dropy will save data to {args.rootdir}/{subfolder}")
 
-    dbx = DropboxDownloader(
-        app_secret=args.app_secret,
-        app_key=args.app_key,
-    )
-    dbx.init()
+    #dbx = DropboxDownloader(
+    #    app_secret=args.app_secret,
+    #    app_key=args.app_key,
+    #)
+    #dbx.init()
 
-    res = dbx.list_folder(folder_display, recursive=True)
-    files = res["files"]
-    files = unnest(files, [])
+    #res = dbx.list_folder(folder_display, recursive=True)
+    #files = res["files"]
+    #files = unnest(files, [])
 
-    # files = ['/Data/ethoscope/2022-01-04_ethoscope_data/results/None.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/None', '/Data/ethoscope/2022-01-04_ethoscope_data/results/index.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-04-14_12-19-51/2021-04-14_12-19-51_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-04-14_12-19-51/2021-04-14_12-19-51_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-14_07-34-56/2021-06-14_07-34-56_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-14_07-34-56/2021-06-14_07-34-56_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-21_15-59-47/2021-06-21_15-59-47_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-21_15-59-47/2021-06-21_15-59-47_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-29_15-46-12/2021-06-29_15-46-12_004aad42625f433eb4bd2b44f811738e.txt']
+    ## files = ['/Data/ethoscope/2022-01-04_ethoscope_data/results/None.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/None', '/Data/ethoscope/2022-01-04_ethoscope_data/results/index.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-04-14_12-19-51/2021-04-14_12-19-51_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-04-14_12-19-51/2021-04-14_12-19-51_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-14_07-34-56/2021-06-14_07-34-56_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-14_07-34-56/2021-06-14_07-34-56_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-21_15-59-47/2021-06-21_15-59-47_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-21_15-59-47/2021-06-21_15-59-47_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-29_15-46-12/2021-06-29_15-46-12_004aad42625f433eb4bd2b44f811738e.txt']
 
-    dbfiles = []
-    for file in files:
-        if re.match(".*.db$", file):
-            dbfiles.append(file)
+    #dbfiles = []
+    #for file in files:
+    #    if re.match(".*.db$", file):
+    #        dbfiles.append(file)
 
-        
-    dbfiles = sorted(dbfiles)        
-    print(dbfiles)
+    #dbfiles = sorted(dbfiles)
+    #print(dbfiles)
 
     if args.metadata is None:
         answer = input("No metadata passed. Do you want to download every dbfile?: Y/n ")
@@ -118,17 +118,19 @@ def main(ap=None, args=None):
         metadata = pd.read_csv(args.metadata)[["machine_name", "date"]]
         metadata.drop_duplicates(inplace=True)
 
-        import ipdb; ipdb.set_trace()
-
+        #with open("dbfiles.pkl", "wb") as fh: pickle.dump(dbfiles, fh)
+        with open("dbfiles.pkl", "rb") as fh: dbfiles = pickle.load(fh)
         dbfiles = match_ethoscope_metadata(dbfiles, metadata)
 
 
     if len(dbfiles) == 0:
         logger.warning("No dbfiles found matching your metadata")
         return
-    
-    dbfilenames = [os.path.basename(dbfile) for dbfile in dbfiles]
 
+    dbfilenames = [dbfile.replace(folder_display, "") for dbfile in dbfiles]
+
+
+    import ipdb; ipdb.set_trace()
     joblib.Parallel(n_jobs=-2)(
         joblib.delayed(sync)(
             f"Dropbox:{folder_display}/{file}", os.path.join(args.rootdir, subfolder, file)

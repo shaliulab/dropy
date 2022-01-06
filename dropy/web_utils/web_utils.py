@@ -24,7 +24,7 @@ class OurCherootServer(bottle.ServerAdapter):
             server.start()
         finally:
             server.stop()
-            
+
 
 def set_server(host="0.0.0.0", port=9000):
     api = bottle.Bottle()
@@ -51,7 +51,7 @@ def sync(source, dest):
     return session.post(
         "http://localhost:9000/sync",
         json={
-            "source": source, 
+            "source": source,
             "dest": dest,
             "yes": True,
         }
