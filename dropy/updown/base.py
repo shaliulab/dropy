@@ -13,7 +13,7 @@ import sys
 import unicodedata
 import dropbox
 
-from .utils import stopwatch, should_be_ignored, already_synced, get_shared_folders_urls, save_raw_stream, check_downloaded_content_matches
+from .utils import stopwatch, should_be_ignored, already_synced, get_shared_folders_urls, save_raw_stream, check_downloaded_content_matches, sanitize_path
 from .updown import upload, download
 from .shared import find_shared_folder
 from dropy.web_utils import list_folder as list_folder_request
@@ -107,8 +107,14 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None, listing = Non
     if not fullfolder.endswith("/"): fullfolder += "/"
 
     if not force_download and listing is None:
-        listing = list_folder_request(fullfolder, recursive=False)["files"]
-        listing = {file.replace(fullfolder, ""): listing[file] for file in listing}
+        try:
+            md = dbx.dbx.files_get_metadata(
+                sanitize_path(os.path.join(folder, subfolder, os.path.basename(fullname)))
+            )
+            listing = {os.path.basename(md.path_display): md}
+            listing = {file.replace(fullfolder, ""): listing[file] for file in listing}
+        except:
+            listing = {}
 
     if not isinstance(name, six.text_type):
         name = name.decode('utf-8')
