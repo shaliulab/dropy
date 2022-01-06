@@ -16,6 +16,8 @@ setup(
     entry_points={
         'console_scripts': [
             'dropy-legacy=dropy.bin.dropy_legacy:main',
+            'dropy-batch=dropy.bin.dropy_batch:main',
+            'dropy-init=dropy.bin.dropy_init:main',
             'dropy=dropy.bin.dropy:main',
         ]
     },
