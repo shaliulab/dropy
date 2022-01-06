@@ -82,6 +82,11 @@ def list_folder(folder):
     return dbx.list_folder(folder)
 
 
+@api.get("/info")
+def info():
+    return dbx.current_account
+
+
 @api.get("/close")
 def close(exit_status=0):
     logger.info("Closing...")
