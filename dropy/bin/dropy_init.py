@@ -42,10 +42,10 @@ def sync():
     # data = bottle.request.body.read()
     # data = json.loads(data)
     data = load_data(bottle)
+    print(data)
 
     source = data.pop("source").split(":")
     dest = data.pop("dest").split(":")
-
 
     if len(source) == 2 and source[0] == "Dropbox" and len(dest) == 1:
         remote_path = source[1]
@@ -70,6 +70,8 @@ def sync():
     folder = "/".join(remote_path[:2])
     subfolder = os.path.dirname("/".join(remote_path[2:]))
     fullname = local_path
+
+    print(f"Syncing {fullname} / {folder} {subfolder}")
 
     # to download
     dbx.sync_file(

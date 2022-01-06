@@ -8,19 +8,20 @@ import pandas as pd
 import joblib
 import dropbox
 from dropy import DropboxDownloader
-from dropy.oauth.official import get_parser as oauth_get_parser
-from dropy.web_utils import sync
-from dropy.updown.utils import unnest
+from dropy.web_utils import sync, list_folder
+from dropy.updown.utils import unnest, sanitize_path
 from dropy.updown.base import sync_file
 import dropy
 
 logger = logging.getLogger(__name__)
 
 def get_parser(ap=None):
-    ap = oauth_get_parser(ap)
+    if ap is None:
+        ap = argparse.ArgumentParser()
     ap.add_argument("--folder", required=True) # "/Data/ethoscope/2022-01-04_ethoscope_data/results"
     ap.add_argument("--rootdir", required=True) # "/Data/ethoscope/2022-01-04_ethoscope_data/results"
     ap.add_argument("--metadata")
+    ap.add_argument("--ncores", default=5, type=int)
     return ap
 
 
@@ -79,15 +80,8 @@ def main(ap=None, args=None):
 
     print(f"dropy will save data to {args.rootdir}/{subfolder}")
 
-    dbx = DropboxDownloader(
-       app_secret=args.app_secret,
-       app_key=args.app_key,
-    )
-    dbx.init()
-
-    res = dbx.list_folder(folder_display, recursive=True)
-    files = res["files"]
-    files = unnest(files, [])
+    res = list_folder(folder_display, recursive=4)
+    files = res["paths"]
 
     dbfiles = []
     for file in files:
@@ -119,26 +113,32 @@ def main(ap=None, args=None):
 
     dbfilenames = [dbfile.replace(folder_display, "") for dbfile in dbfiles]
 
+    #joblib.Parallel(n_jobs=args.ncores)(
+    #    joblib.delayed(sync_file)(
+    #        dbx=dbx.dbx,
+    #        fullname=os.path.join(args.rootdir, file),
+    #        folder=os.path.join(folder_display, os.path.dirname(file)),
+    #        subfolder="",
+    #        shared=False,
+    #        args=argparse.Namespace(yes=True, no=None, default=None)
+    #    )
+    #        for file in dbfilenames
+    #)
 
-    import ipdb; ipdb.set_trace()
-
-    joblib.Parallel(n_jobs=-2)(
-        joblib.delayed(sync_file)(
-            dbx=dbx.dbx,
-            fullname=os.path.join(args.rootdir, file),
-            folder=os.path.join(folder_display, os.path.dirname(file)),
-            subfolder="",
-            shared=False,
-            args=argparse.Namespace(yes=True, no=None, default=None)
+    sync_args = [
+        (
+            sanitize_path(f"Dropbox:{folder_display}/{file}"),
+            sanitize_path(os.path.join(args.rootdir, subfolder, file.lstrip("/")))
         )
-            for file in dbfilenames
+        for file in dbfilenames
+    ]
+
+    joblib.Parallel(n_jobs=args.ncores)(
+        joblib.delayed(sync)(
+            *sync_arg
+        )
+            for sync_arg in sync_args
     )
-    # joblib.Parallel(n_jobs=-2)(
-    #     joblib.delayed(sync)(
-    #         f"Dropbox:{folder_display}/{file}", os.path.join(args.rootdir, subfolder, file)
-    #     )
-    #         for file in dbfilenames
-    # )
 
 
 

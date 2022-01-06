@@ -1,15 +1,15 @@
 import logging
+import os.path
 import joblib
 import time
 import dropbox
-from collections import namedtuple
 from dropy.oauth.official import get_access_token
+from dropy.core.data import Entry
 from .updown import SyncMixin
 logger = logging.getLogger(__name__)
 
 LIMIT = 500
 
-Entry = namedtuple("Entry", ["client_modified", "size"])
 
 class DropboxDownloader(SyncMixin):
 
@@ -62,7 +62,12 @@ class DropboxDownloader(SyncMixin):
             where the first element contains all the paths that map to a directory
             and the second element contains all the paths that map to a file
         """
+        if recursive == 0:
+            recursive = False
+        else:
+            recursive -= 1
         print(f"Listing folder {folder} with recursive {recursive}")
+
 
         assert folder.startswith("/")
         folder_result = self.dbx.files_list_folder(folder, limit=LIMIT)
@@ -72,7 +77,6 @@ class DropboxDownloader(SyncMixin):
             print(f"{len(folder_result.entries)} entries downloaded")
             logger.debug("calling list_folder_continue. length of entries = {len(entries)}")
             print(f"calling list_folder_continue. length of entries = {len(entries)}")
-            print(folder_result.cursor)
             folder_result = self.dbx.files_list_folder_continue(folder_result.cursor)
             for entry in folder_result.entries:
                 entries[entry.name] = entry
@@ -81,10 +85,10 @@ class DropboxDownloader(SyncMixin):
 
         dirs = {}
         files = {}
+        paths = {}
         for entry in entries.values():
             if type(entry) is dropbox.files.FolderMetadata:
-                #dirs[entry.name] = serializable_entry
-                pass
+                dirs[entry.name] = None
             elif type(entry) is dropbox.files.FileMetadata:
                 serializable_entry = Entry(
                     client_modified = entry.client_modified.strftime("%Y-%m-%d_%H-%M"),
@@ -92,6 +96,8 @@ class DropboxDownloader(SyncMixin):
                 )
 
                 files[entry.name] = serializable_entry
+                paths[entry.path_display] = serializable_entry
+
             else:
                 logger.warning(f"{entry} is neither a folder nor a file")
 
@@ -103,16 +109,18 @@ class DropboxDownloader(SyncMixin):
             output = joblib.Parallel(n_jobs=-2)(
                 joblib.delayed(
                     self.list_folder
-                )(directory, recursive=recursive)
+                )(os.path.join(folder, directory), recursive=recursive)
                 for directory in dirs
             )
 
             for entry in output:
-                serializable_entry = Entry(
-                    client_modified = entry.client_modified.strftime("%Y-%m-%d_%H-%M"),
-                    size = entry.size
-                )
+                extra_files = entry["files"]
+                extra_paths = entry["paths"]
 
-                files[entry.name] = serializable_entry
+                for entry_name, file in extra_files.items():
+                    files[entry_name] = file
+                for entry_path, file in extra_paths.items():
+                    paths[entry_path] = file
 
-        return {"dirs": [], "files": files}
+
+        return {"dirs": [], "files": files, "paths": paths}

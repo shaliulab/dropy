@@ -99,14 +99,8 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
     # This is needed because the Dropbox API is different
     # if folder is shared (files_download / files_upload)
     # or not (sharing_get_shared_link_file / ?)
-    shared_folders = get_shared_folders_urls()
     folder_name = folder
-    if shared is None:
-        shared = False
-        # shared = folder in shared_folders
-
-        if shared:
-            folder = shared_folders[folder]
+    shared = False
 
 
     fullfolder = os.path.join(folder_name, subfolder)
@@ -119,6 +113,7 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
         name = name.decode('utf-8')
     nname = unicodedata.normalize('NFC', name)
 
+    print(nname)
     if should_be_ignored(name):
         pass
 

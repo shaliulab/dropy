@@ -2,6 +2,7 @@ import json
 import logging
 import requests
 import bottle
+from dropy.core.data import Entry
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,10 @@ def list_folder(folder, recursive):
     res = session.post(url, json=data)
 
     if res.ok:
-        return json.loads(res.content.decode())
+        response = json.loads(res.content.decode())
+        response["files"] = {k: Entry(client_modified = v["client_modified"], size = v["size"]) for k, v in response["files"].items()}
+        response["paths"] = {k: Entry(client_modified = v["client_modified"], size = v["size"]) for k, v in response["paths"].items()}
+        return response
     else:
         logger.warning(
             "Request could not be completed successfully"
