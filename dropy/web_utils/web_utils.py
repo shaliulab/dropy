@@ -1,3 +1,4 @@
+import json
 import logging
 import requests
 import bottle
@@ -60,6 +61,11 @@ def list_folder(folder):
 
     session = requests.Session()
 
-    return session.get(
-        f"http://localhost:9000/list_folder/{folder}",
+    res = session.post(
+        "http://localhost:9000/list_folder",
+        json={
+            "folder": folder
+        }
     )
+
+    return json.loads(res.content.decode())

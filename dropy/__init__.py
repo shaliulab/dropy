@@ -52,7 +52,7 @@ class DropboxDownloader(SyncMixin):
            folder: Remote Dropbox folder
         
         Returns:
-            A length 2 tuple of lists,
+            A length 2 list of lists,
             where the first element contains all the paths that map to a directory
             and the second element contains all the paths that map to a file  
         """
@@ -70,4 +70,4 @@ class DropboxDownloader(SyncMixin):
             else:
                 logger.warning(f"{entry} is neither a folder nor a file")
         
-        return dirs, files
+        return {"dirs": dirs, "files": files}

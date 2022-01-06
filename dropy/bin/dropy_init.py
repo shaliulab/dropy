@@ -32,11 +32,16 @@ def main(ap=None, args=None):
     bottle.run(api, host='0.0.0.0', port=PORT, debug=DEBUG, server=server)
 
 
-@api.post("/sync")
-def sync():
+def load_data(bottle):
     data = bottle.request.body.read()
     data = json.loads(data)
-    print(data)
+    return data
+
+@api.post("/sync")
+def sync():
+    # data = bottle.request.body.read()
+    # data = json.loads(data)
+    data = load_data(bottle)
 
     source = data.pop("source").split(":")
     dest = data.pop("dest").split(":")
@@ -77,9 +82,12 @@ def sync():
         **data
     )
 
-@api.get("/list_folder/<folder>")
-def list_folder(folder):
-    return dbx.list_folder(folder)
+@api.post("/list_folder")
+def list_folder():
+
+    data = load_data(bottle)
+    res = dbx.list_folder(data["folder"])
+    return res
 
 
 @api.get("/info")
