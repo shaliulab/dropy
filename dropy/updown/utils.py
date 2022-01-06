@@ -62,7 +62,7 @@ def get_shared_folders_urls():
 
     config_path = resource_filename("dropy", "data/config.yaml")
 
-    logger.debug("Reading config from: {config_path}")
+    logger.debug(f"Reading config from: {config_path}")
 
     with open(config_path, "r") as filehandle:
         config = yaml.load(filehandle, Loader=yaml.SafeLoader)
