@@ -303,9 +303,9 @@ class SyncMixin:
         return updown(self.dbx, rootdir, folder, yes=None, no=None, default=None)
 
 
-    def sync_file(self, fullname, folder, subfolder):
+    def sync_file(self, fullname, folder, subfolder, yes=None, no=None, default=None):
 
-        yesno_args = argparse.Namespace(yes=None, no=None, default=None)
+        yesno_args = argparse.Namespace(yes=yes, no=no, default=default)
 
         return sync_file(
             dbx=self.dbx,

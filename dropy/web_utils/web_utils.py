@@ -1,4 +1,5 @@
 import logging
+import requests
 import bottle
 try:
     from cheroot.wsgi import Server as WSGIServer # type: ignore
@@ -41,3 +42,15 @@ def set_server(host="0.0.0.0", port=9000):
         logging.warning("Cherrypy version is bigger than 9, change to cheroot server")
 
     return api, bottle, server
+
+def sync(source, dest):
+
+    session = requests.Session()
+
+    return session.post(
+        "http://localhost:9000/sync",
+        json={
+            "source": source, 
+            "dest": dest, 
+        }
+    )

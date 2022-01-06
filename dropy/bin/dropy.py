@@ -1,6 +1,6 @@
 import argparse
-import requests
 import logging
+from dropy.web_utils import sync
 
 logger = logging.getLogger(__name__)
 logging.getLogger("dropy.updown.utils").setLevel(logging.DEBUG)
@@ -21,16 +21,8 @@ def main(args=None):
 
     source = args.source
     dest = args.dest
-    session = requests.Session()
+    sync(source, dest)
 
-    session.post(
-        "http://localhost:9000/sync",
-        json={
-            "source": source, 
-            "dest": dest, 
-        }
-    )
-    
 
 
 if __name__ == "__main__":

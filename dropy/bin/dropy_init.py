@@ -38,8 +38,8 @@ def sync():
     data = json.loads(data)
     print(data)
 
-    source = data["source"].split(":")
-    dest = data["dest"].split(":")
+    source = data.pop("source").split(":")
+    dest = data.pop("dest").split(":")
 
 
     if len(source) == 2 and source[0] == "Dropbox" and len(dest) == 1:
@@ -72,6 +72,7 @@ def sync():
         fullname,
         folder,
         subfolder,
+        **data
     )
 
 
