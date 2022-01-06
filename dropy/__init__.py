@@ -5,6 +5,8 @@ from dropy.oauth.official import get_access_token
 from .updown import SyncMixin
 logger = logging.getLogger(__name__)
 
+LIMIT = 500
+
 class DropboxDownloader(SyncMixin):
 
     def __init__(self, app_key, app_secret):
@@ -57,8 +59,11 @@ class DropboxDownloader(SyncMixin):
             and the second element contains all the paths that map to a file  
         """
         assert folder.startswith("/")
-        folder_result = self.dbx.files_list_folder(folder)
+        folder_result = self.dbx.files_list_folder(folder, limit=LIMIT)
         entries = folder_result.entries
+        while len(entries) == LIMIT:
+            folder_result = self.dbx.files_list_folder_continue(folder_result.cursor, limit=LIMIT)
+            entries.append(folder_result.entries)
         
         dirs = []
         files = []
