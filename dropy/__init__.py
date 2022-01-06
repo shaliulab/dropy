@@ -72,7 +72,7 @@ class DropboxDownloader(SyncMixin):
 
         output = joblib.Parallel(n_jobs=-2)(
             joblib.delayed(
-                self.dbx.list_folder
+                self.list_folder
             )(directory)
             for directory in dirs
         )
