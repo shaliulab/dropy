@@ -77,6 +77,10 @@ def sync():
         **data
     )
 
+@api.get("/list_folder/<folder>")
+def list_folder(folder):
+    return dbx.list_folder(folder)
+
 
 @api.get("/close")
 def close(exit_status=0):

@@ -1,4 +1,3 @@
-import json
 import logging
 import dropbox
 from dropy.oauth.official import get_access_token
@@ -26,6 +25,15 @@ class DropboxDownloader(SyncMixin):
         return self._dropbox_handle.with_path_root(dropbox.common.PathRoot.root(self.root_namespace_id))
 
 
+    @property
+    def current_account(self):
+        return self._current_account
+
+    @property
+    def root_namespace_id(self):
+        return self.current_account.root_info.root_namespace_id
+
+
     def init(self):
 
         access_token = get_access_token(**self.credentials)
@@ -36,23 +44,30 @@ class DropboxDownloader(SyncMixin):
     def close(self):
         return self._dropbox_handle.close()
 
-    @property
-    def current_account(self):
-        return self._current_account
 
-    @property
-    def root_namespace_id(self):
-        return self.current_account.root_info.root_namespace_id
+    def list_folder(self, folder):
+        """
 
-    # def init_dropbox(self):
-
-    #     response = authenticate(**self.credentials)
-    #     try:
-    #         token = json.loads(response.text)["access_token"]
-    #     except KeyError:
-    #         logger.error("OAuth authentication failed")
-    #         return 0
-    #     dbx = dropbox.Dropbox(token)
-
-    #     self._response = response
-    #     self._dropbox_handle = dbx
+        Arguments:
+           folder: Remote Dropbox folder
+        
+        Returns:
+            A length 2 tuple of lists,
+            where the first element contains all the paths that map to a directory
+            and the second element contains all the paths that map to a file  
+        """
+        assert folder.startswith("/")
+        folder_result = self.dbx.files_list_folder(folder)
+        entries = folder_result.entries
+        
+        dirs = []
+        files = []
+        for entry in entries:
+            if type(entry) is dropbox.files.FolderMetadata:
+                dirs.append(entry.path_display)
+            elif type(entry) is dropbox.files.FileMetadata:
+                files.append(entry.path_display)
+            else:
+                logger.warning(f"{entry} is neither a folder nor a file")
+        
+        return dirs, files

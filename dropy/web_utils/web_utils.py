@@ -55,3 +55,11 @@ def sync(source, dest):
             "yes": True,
         }
     )
+
+def list_folder(folder):
+
+    session = requests.Session()
+
+    return session.get(
+        f"http://localhost:9000/list_folder/{folder}",
+    )
