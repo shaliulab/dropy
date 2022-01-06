@@ -69,7 +69,7 @@ def get_shared_folders_urls():
         
     urls = config["shared_folders"]
 
-    logger.debug("Shared folders URL: {urls}")
+    logger.debug(f"Shared folders URL: {urls}")
     return urls
 
 def save_raw_stream(dest, data):
