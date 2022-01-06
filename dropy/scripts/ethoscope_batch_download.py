@@ -88,11 +88,11 @@ def main(ap=None, args=None):
 
     print(f"dropy will save data to {args.rootdir}/{subfolder}")
 
-    #dbx = DropboxDownloader(
-    #    app_secret=args.app_secret,
-    #    app_key=args.app_key,
-    #)
-    #dbx.init()
+    dbx = DropboxDownloader(
+       app_secret=args.app_secret,
+       app_key=args.app_key,
+    )
+    dbx.init()
 
     #res = dbx.list_folder(folder_display, recursive=True)
     #files = res["files"]
@@ -135,6 +135,7 @@ def main(ap=None, args=None):
 
     joblib.Parallel(n_jobs=-2)(
         joblib.delayed(sync_file)(
+            dbx=dbx,
             fullname=os.path.join(args.rootdir, file),
             folder=os.path.join(folder_display, os.path.dirname(file)),
             subfolder="",
