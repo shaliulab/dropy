@@ -72,7 +72,12 @@ def get_shared_folders_urls():
     logger.debug(f"Shared folders URL: {urls}")
     return urls
 
-def save_raw_stream(dest, data):
+def save_raw_stream(dest, data, exist_ok=True):
+    os.makedirs(
+        os.path.dirname(
+            dest
+        ), exist_ok=exist_ok
+    )
     filehandle = open(dest, "wb", buffering=0)
     filehandle.write(data)
     filehandle.close()
