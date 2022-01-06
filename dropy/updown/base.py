@@ -70,7 +70,7 @@ def main(ap = None, args=None):
     return updown(rootdir, folder, yes, no, default, token=token)
 
 
-def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
+def sync_file(dbx, fullname, folder, subfolder, args, shared=None, listing = None, force_download=None):
     """
 
     Push the contents of fullname to folder/subfolder/name in Dropbox
@@ -106,8 +106,9 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
     fullfolder = os.path.join(folder_name, subfolder)
     if not fullfolder.endswith("/"): fullfolder += "/"
 
-    listing = list_folder_request(fullfolder, recursive=False)["files"]
-    listing = {file.replace(fullfolder, ""): listing[file] for file in listing}
+    if not force_download and listing is None:
+        listing = list_folder_request(fullfolder, recursive=False)["files"]
+        listing = {file.replace(fullfolder, ""): listing[file] for file in listing}
 
     if not isinstance(name, six.text_type):
         name = name.decode('utf-8')
@@ -118,8 +119,14 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
         pass
 
     # it's available on dropbox.com -> download or upload
-    elif nname in listing:
-        if already_synced(fullname, nname, name, listing):
+    elif force_download or nname in listing:
+        if force_download:
+            print(f"Forcing download of {fullname}")
+            is_synced=False
+
+        else:
+            is_synced = already_synced(fullname, nname, name, listing)
+        if is_synced:
             pass
         else:
             data = download(
@@ -155,6 +162,7 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
         else:
             logger.warning(f"{fullname} does not exist")
 
+    return listing
 
 def updown(dbx, rootdir, folder, yes, no, default):
     """
@@ -306,7 +314,7 @@ class SyncMixin:
         return updown(self.dbx, rootdir, folder, yes=None, no=None, default=None)
 
 
-    def sync_file(self, fullname, folder, subfolder, yes=None, no=None, default=None):
+    def sync_file(self, fullname, folder, subfolder, yes=None, no=None, default=None, listing=None, force_download=None):
 
         yesno_args = argparse.Namespace(yes=yes, no=no, default=default)
 
@@ -315,7 +323,9 @@ class SyncMixin:
             fullname=fullname,
             folder=folder,
             subfolder=subfolder,
-            args=yesno_args
+            args=yesno_args,
+            listing=listing,
+            force_download=force_download
         )
 
 
