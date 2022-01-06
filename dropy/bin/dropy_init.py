@@ -57,14 +57,14 @@ def sync():
                 path = remote_path
             )
         except dropbox.exceptions.ApiError:
-            raise Exception ("Remote file does not exist")
+            raise Exception (f"{remote_path} does not exist on Dropbox server")
 
     elif len(dest) == 2 and dest[0] == "Dropbox" and len(source) == 1:
         remote_path = dest[1]
         local_path = source[0]
         # I only want it to work in upload mode
         assert os.path.exists(local_path), "Local file does not exist"
-    
+
     assert remote_path.startswith(os.path.sep)
     remote_path = remote_path.split(os.path.sep)
     folder = "/".join(remote_path[:2])
@@ -86,7 +86,7 @@ def sync():
 def list_folder():
 
     data = load_data(bottle)
-    res = dbx.list_folder(data["folder"])
+    res = dbx.list_folder(**data)
     return res
 
 

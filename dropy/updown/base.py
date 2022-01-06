@@ -16,6 +16,7 @@ import dropbox
 from .utils import stopwatch, should_be_ignored, already_synced, get_shared_folders_urls, save_raw_stream, check_downloaded_content_matches
 from .updown import upload, download
 from .shared import find_shared_folder
+from dropy.web_utils import list_folder as list_folder_request
 
 if sys.version.startswith('2'):
     input = raw_input  # type: ignore # noqa: E501,F821; pylint: disable=redefined-builtin,undefined-variable,useless-suppression
@@ -58,7 +59,7 @@ def main(ap = None, args=None):
     yes = args.yes
     no = args.no
     default = args.default
-    
+
     if sum([bool(b) for b in (yes, no, default)]) > 1:
         print('At most one of --yes, --no, --default is allowed')
         sys.exit(2)
@@ -71,7 +72,7 @@ def main(ap = None, args=None):
 
 def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
     """
-    
+
     Push the contents of fullname to folder/subfolder/name in Dropbox
     or bring the content of folder/subfolder/name to fullname
 
@@ -83,12 +84,12 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
         listing (dict): Files available in Dropbox website
         args (namespace): must contain no, yes, default
         **kwargs (dict): additional keyword arguments to upload and download
-    
+
     Returns:
         None
     """
 
-    
+
     name = os.path.basename(fullname)
 
     # NOTE
@@ -103,13 +104,17 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
     if shared is None:
         shared = False
         # shared = folder in shared_folders
-        
+
         if shared:
             folder = shared_folders[folder]
 
 
-    listing = list_folder(dbx, folder_name, subfolder, shared=shared)
-    
+    fullfolder = os.path.join(folder_name, subfolder)
+    if not fullfolder.endswith("/"): fullfolder += "/"
+
+    listing = list_folder_request(fullfolder, recursive=False)["files"]
+    listing = {file.replace(fullfolder, ""): listing[file] for file in listing}
+
     if not isinstance(name, six.text_type):
         name = name.decode('utf-8')
     nname = unicodedata.normalize('NFC', name)
@@ -143,7 +148,7 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
             else:
                 save_raw_stream(
                     fullname, data
-                )              
+                )
 
     # it's NOT available on dropbox.com -> upload
     elif yesno('Upload %s' % name, True, args):
@@ -155,7 +160,7 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
         else:
             logger.warning(f"{fullname} does not exist")
 
-        
+
 def updown(dbx, rootdir, folder, yes, no, default):
     """
     Parse command line, then iterate over files and directories under
@@ -207,7 +212,7 @@ def list_folder(dbx, folder, subfolder, shared=False):
 
     if shared:
         list_folder_shared_(dbx, folder, subfolder)
-    
+
     else:
         return list_folder_(dbx, "/"+folder,  subfolder)
 
@@ -320,6 +325,6 @@ class SyncMixin:
 
 
 
-            
+
 if __name__ == '__main__':
     main()

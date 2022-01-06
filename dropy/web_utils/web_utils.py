@@ -2,6 +2,9 @@ import json
 import logging
 import requests
 import bottle
+
+logger = logging.getLogger(__name__)
+
 try:
     from cheroot.wsgi import Server as WSGIServer # type: ignore
 except ImportError:
@@ -40,7 +43,7 @@ def set_server(host="0.0.0.0", port=9000):
         server = "cherrypy"
         cheroot_server = OurCherootServer(host=host, port=port)
         bottle.server_names["cherrypy"] = cheroot_server
-        logging.warning("Cherrypy version is bigger than 9, change to cheroot server")
+        logger.warning("Cherrypy version is bigger than 9, change to cheroot server")
 
     return api, bottle, server
 
@@ -57,15 +60,22 @@ def sync(source, dest):
         }
     )
 
-def list_folder(folder):
+def list_folder(folder, recursive):
 
     session = requests.Session()
 
-    res = session.post(
-        "http://localhost:9000/list_folder",
-        json={
-            "folder": folder
+    url = "http://localhost:9000/list_folder"
+    data = {
+            "folder": folder,
+            "recursive": recursive,
         }
-    )
+    res = session.post(url, json=data)
 
-    return json.loads(res.content.decode())
+    if res.ok:
+        return json.loads(res.content.decode())
+    else:
+        logger.warning(
+            "Request could not be completed successfully"
+            f" URL: {url}"
+            f" JSON: {data}"
+        )

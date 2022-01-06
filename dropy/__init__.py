@@ -1,11 +1,15 @@
 import logging
 import joblib
+import time
 import dropbox
+from collections import namedtuple
 from dropy.oauth.official import get_access_token
 from .updown import SyncMixin
 logger = logging.getLogger(__name__)
 
 LIMIT = 500
+
+Entry = namedtuple("Entry", ["client_modified", "size"])
 
 class DropboxDownloader(SyncMixin):
 
@@ -58,32 +62,57 @@ class DropboxDownloader(SyncMixin):
             where the first element contains all the paths that map to a directory
             and the second element contains all the paths that map to a file
         """
+        print(f"Listing folder {folder} with recursive {recursive}")
+
         assert folder.startswith("/")
         folder_result = self.dbx.files_list_folder(folder, limit=LIMIT)
-        entries = folder_result.entries
-        while len(folder_result.entries) == LIMIT:
+        entries = {entry.name: entry for entry in folder_result.entries}
+        while folder_result.has_more:
+            logger.info(f"{len(folder_result.entries)} entries downloaded")
+            print(f"{len(folder_result.entries)} entries downloaded")
             logger.debug("calling list_folder_continue. length of entries = {len(entries)}")
+            print(f"calling list_folder_continue. length of entries = {len(entries)}")
+            print(folder_result.cursor)
             folder_result = self.dbx.files_list_folder_continue(folder_result.cursor)
-            entries += folder_result.entries
+            for entry in folder_result.entries:
+                entries[entry.name] = entry
 
-        dirs = []
-        files = []
-        for entry in entries:
+        print(f"All {len(entries)} have been fetched")
+
+        dirs = {}
+        files = {}
+        for entry in entries.values():
             if type(entry) is dropbox.files.FolderMetadata:
-                dirs.append(entry.path_display)
+                #dirs[entry.name] = serializable_entry
+                pass
             elif type(entry) is dropbox.files.FileMetadata:
-                files.append(entry.path_display)
+                serializable_entry = Entry(
+                    client_modified = entry.client_modified.strftime("%Y-%m-%d_%H-%M"),
+                    size = entry.size
+                )
+
+                files[entry.name] = serializable_entry
             else:
                 logger.warning(f"{entry} is neither a folder nor a file")
 
-        output = joblib.Parallel(n_jobs=-2)(
-            joblib.delayed(
-                self.list_folder
-            )(directory)
-            for directory in dirs
-        )
+        if recursive:
 
-        for entry in output:
-            files.append(entry["files"])
+            output = []
+            #for directory in dirs:
+            #    output.append(self.list_folder(directory))
+            output = joblib.Parallel(n_jobs=-2)(
+                joblib.delayed(
+                    self.list_folder
+                )(directory, recursive=recursive)
+                for directory in dirs
+            )
 
-        return {"dirs": dirs, "files": files}
+            for entry in output:
+                serializable_entry = Entry(
+                    client_modified = entry.client_modified.strftime("%Y-%m-%d_%H-%M"),
+                    size = entry.size
+                )
+
+                files[entry.name] = serializable_entry
+
+        return {"dirs": [], "files": files}

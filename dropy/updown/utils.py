@@ -41,7 +41,10 @@ def already_synced(fullname, nname, name, listing):
         mtime = os.path.getmtime(fullname)
         mtime_dt = datetime.datetime(*time.gmtime(mtime)[:6])
         size = os.path.getsize(fullname)
-        if mtime_dt == md.client_modified and size == md.size):
+        if isinstance(md, dropbox.files.FileMetadata) and mtime_dt == md.client_modified and size == md.size:
+            print(name, 'is already synced [stats match]')
+            return True
+        elif mdtime_dt.strftime("%Y-%m-%d_%H-%M") == md.client_modified and szie == md.size:
             print(name, 'is already synced [stats match]')
             return True
 
@@ -55,7 +58,7 @@ def already_synced(fullname, nname, name, listing):
 def format_path(path):
     while '//' in path:
         path = path.replace('//', '/')
-    
+
     return path
 
 
@@ -67,7 +70,7 @@ def get_shared_folders_urls():
 
     with open(config_path, "r") as filehandle:
         config = yaml.load(filehandle, Loader=yaml.SafeLoader)
-        
+
     urls = config["shared_folders"]
 
     logger.debug(f"Shared folders URL: {urls}")
