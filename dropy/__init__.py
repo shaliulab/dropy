@@ -45,7 +45,7 @@ class DropboxDownloader(SyncMixin):
         return self._dropbox_handle.close()
 
 
-    def list_folder(self, folder):
+    def list_folder(self, folder, recursive=False):
         """
 
         Arguments:
@@ -69,5 +69,11 @@ class DropboxDownloader(SyncMixin):
                 files.append(entry.path_display)
             else:
                 logger.warning(f"{entry} is neither a folder nor a file")
+
+        for directory in dirs:
+            res = self.dbx.files_list_folder(directory)
+            files.append(res["files"])
+
+
         
         return {"dirs": dirs, "files": files}
