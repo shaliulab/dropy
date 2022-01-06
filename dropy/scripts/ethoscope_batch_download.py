@@ -85,19 +85,17 @@ def main(ap=None, args=None):
     )
     dbx.init()
 
-    #res = dbx.list_folder(folder_display, recursive=True)
-    #files = res["files"]
-    #files = unnest(files, [])
+    res = dbx.list_folder(folder_display, recursive=True)
+    files = res["files"]
+    files = unnest(files, [])
 
-    ## files = ['/Data/ethoscope/2022-01-04_ethoscope_data/results/None.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/None', '/Data/ethoscope/2022-01-04_ethoscope_data/results/index.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-04-14_12-19-51/2021-04-14_12-19-51_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-04-14_12-19-51/2021-04-14_12-19-51_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-14_07-34-56/2021-06-14_07-34-56_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-14_07-34-56/2021-06-14_07-34-56_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-21_15-59-47/2021-06-21_15-59-47_004aad42625f433eb4bd2b44f811738e.db', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-21_15-59-47/2021-06-21_15-59-47_004aad42625f433eb4bd2b44f811738e.txt', '/Data/ethoscope/2022-01-04_ethoscope_data/results/004aad42625f433eb4bd2b44f811738e/ETHOSCOPE_004/2021-06-29_15-46-12/2021-06-29_15-46-12_004aad42625f433eb4bd2b44f811738e.txt']
+    dbfiles = []
+    for file in files:
+        if re.match(".*.db$", file):
+            dbfiles.append(file)
 
-    #dbfiles = []
-    #for file in files:
-    #    if re.match(".*.db$", file):
-    #        dbfiles.append(file)
-
-    #dbfiles = sorted(dbfiles)
-    #print(dbfiles)
+    dbfiles = sorted(dbfiles)
+    print(dbfiles)
 
     if args.metadata is None:
         answer = input("No metadata passed. Do you want to download every dbfile?: Y/n ")
@@ -111,7 +109,7 @@ def main(ap=None, args=None):
         metadata.drop_duplicates(inplace=True)
 
         #with open("dbfiles.pkl", "wb") as fh: pickle.dump(dbfiles, fh)
-        with open("dbfiles.pkl", "rb") as fh: dbfiles = pickle.load(fh)
+        #with open("dbfiles.pkl", "rb") as fh: dbfiles = pickle.load(fh)
         dbfiles = match_ethoscope_metadata(dbfiles, metadata)
 
 
@@ -126,12 +124,12 @@ def main(ap=None, args=None):
 
     joblib.Parallel(n_jobs=-2)(
         joblib.delayed(sync_file)(
-            dbx=dbx,
+            dbx=dbx.dbx,
             fullname=os.path.join(args.rootdir, file),
             folder=os.path.join(folder_display, os.path.dirname(file)),
             subfolder="",
             shared=False,
-            args=argparse.Namespace(yes=True, no=None, default=None)  
+            args=argparse.Namespace(yes=True, no=None, default=None)
         )
             for file in dbfilenames
     )

@@ -39,7 +39,7 @@ class DropboxDownloader(SyncMixin):
     def init(self):
 
         access_token = get_access_token(**self.credentials)
-        self._dropbox_handle = dropbox.Dropbox(oauth2_access_token=access_token)        
+        self._dropbox_handle = dropbox.Dropbox(oauth2_access_token=access_token)
         self._current_account = self._dropbox_handle.users_get_current_account()
 
 
@@ -52,11 +52,11 @@ class DropboxDownloader(SyncMixin):
 
         Arguments:
            folder: Remote Dropbox folder
-        
+
         Returns:
             A length 2 list of lists,
             where the first element contains all the paths that map to a directory
-            and the second element contains all the paths that map to a file  
+            and the second element contains all the paths that map to a file
         """
         assert folder.startswith("/")
         folder_result = self.dbx.files_list_folder(folder, limit=LIMIT)
@@ -65,7 +65,7 @@ class DropboxDownloader(SyncMixin):
             logger.debug("calling list_folder_continue. length of entries = {len(entries)}")
             folder_result = self.dbx.files_list_folder_continue(folder_result.cursor)
             entries += folder_result.entries
-        
+
         dirs = []
         files = []
         for entry in entries:
@@ -85,5 +85,5 @@ class DropboxDownloader(SyncMixin):
 
         for entry in output:
             files.append(entry["files"])
-        
+
         return {"dirs": dirs, "files": files}
