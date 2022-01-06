@@ -62,7 +62,9 @@ class DropboxDownloader(SyncMixin):
             where the first element contains all the paths that map to a directory
             and the second element contains all the paths that map to a file
         """
-        if recursive == 0:
+        if recursive is True:
+            recursive = True
+        elif recursive == 0:
             recursive = False
         else:
             recursive -= 1
