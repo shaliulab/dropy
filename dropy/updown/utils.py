@@ -41,9 +41,10 @@ def already_synced(fullname, nname, name, listing):
         mtime = os.path.getmtime(fullname)
         mtime_dt = datetime.datetime(*time.gmtime(mtime)[:6])
         size = os.path.getsize(fullname)
-        if (isinstance(md, dropbox.files.FileMetadata) and mtime_dt == md.client_modified and size == md.size):
+        if mtime_dt == md.client_modified and size == md.size):
             print(name, 'is already synced [stats match]')
             return True
+
         else:
             print(name, 'exists with different stats, downloading')
             return False
