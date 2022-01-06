@@ -84,7 +84,7 @@ def list_folder(folder):
 
 @api.get("/info")
 def info():
-    return dbx.current_account
+    return dbx.current_account.__str__()
 
 
 @api.get("/close")
