@@ -2,17 +2,21 @@ from setuptools import setup, find_packages
 
 PACKAGE_NAME = "dropy"
 
+packages=find_packages()
+print(packages)
+
 setup(
     name=PACKAGE_NAME,
     version='0.1.0',
-    packages=find_packages("dropy"),
+    packages=packages,
     install_requires=[
         "dropbox",
         "pyaml",
     ],
     entry_points={
         'console_scripts': [
-            'dropy=dropy.dropy:main',
+            'dropy-legacy=dropy.bin.dropy_legacy:main',
+            'dropy=dropy.bin.dropy:main',
         ]
     },
     setup_requires=['flake8'],

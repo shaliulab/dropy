@@ -15,8 +15,8 @@ Populate your app key and app secret in order to run this locally
 def get_parser(ap):
     if ap is None:
         ap = argparse.ArgumentParser()
-    ap.add_argument("--app-key", default=None)
-    ap.add_argument("--app-secret", default=None)
+    ap.add_argument("--app-key", dest="app_key", default=None)
+    ap.add_argument("--app-secret", dest="app_secret", default=None)
     return ap
 
 

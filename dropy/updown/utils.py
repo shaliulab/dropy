@@ -1,11 +1,14 @@
+import logging
 import os.path
 import datetime
 import time
-from pkg_resources import resource_stream
+from pkg_resources import resource_filename
 
 import contextlib
 import yaml
 import dropbox
+
+logger = logging.getLogger(__name__)
 
 @contextlib.contextmanager
 def stopwatch(message):
@@ -34,12 +37,18 @@ def should_be_ignored(name):
 
 def already_synced(fullname, nname, name, listing):
     md = listing[nname]
-    mtime = os.path.getmtime(fullname)
-    mtime_dt = datetime.datetime(*time.gmtime(mtime)[:6])
-    size = os.path.getsize(fullname)
-    if (isinstance(md, dropbox.files.FileMetadata) and mtime_dt == md.client_modified and size == md.size):
-        return True
+    if os.path.exists(fullname):
+        mtime = os.path.getmtime(fullname)
+        mtime_dt = datetime.datetime(*time.gmtime(mtime)[:6])
+        size = os.path.getsize(fullname)
+        if (isinstance(md, dropbox.files.FileMetadata) and mtime_dt == md.client_modified and size == md.size):
+            print(name, 'is already synced [stats match]')
+            return True
+        else:
+            print(name, 'exists with different stats, downloading')
+            return False
     else:
+        print(name, 'does not exist, downloading')
         return False
 
 def format_path(path):
@@ -49,13 +58,40 @@ def format_path(path):
     return path
 
 
-
 def get_shared_folders_urls():
-    
-    config_path = resource_stream("dropy", "data/config.yaml")
+
+    config_path = resource_filename("dropy", "data/config.yaml")
+
+    logger.debug("Reading config from: {config_path}")
 
     with open(config_path, "r") as filehandle:
         config = yaml.load(filehandle, Loader=yaml.SafeLoader)
         
     urls = config["shared_folders"]
-    return urls 
+
+    logger.debug("Shared folders URL: {urls}")
+    return urls
+
+def save_raw_stream(dest, data):
+    filehandle = open(dest, "wb", buffering=0)
+    filehandle.write(data)
+    filehandle.close()
+
+def save_text_stream(dest, data):
+    filehandle = open(dest, "w")
+    filehandle.write(data)
+    filehandle.close()
+
+
+def check_downloaded_content_matches(res, fullname):
+
+    with open(fullname, "rb") as f:
+        data = f.read()
+
+    name = os.path.basename(fullname)
+    if res == data:
+        print(name, 'is already synced [content match]')
+        return True
+    else:
+        print(name, 'has changed since last sync')
+        return False

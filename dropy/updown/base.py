@@ -6,23 +6,21 @@ This is an example app for API v2.
 from __future__ import print_function
 
 import argparse
-import contextlib
-import datetime
+import logging
 import os
 import six
 import sys
-import time
 import unicodedata
 import dropbox
 
-from .utils import stopwatch, should_be_ignored, already_synced, get_shared_folders_urls
+from .utils import stopwatch, should_be_ignored, already_synced, get_shared_folders_urls, save_raw_stream, check_downloaded_content_matches
 from .updown import upload, download
+from .shared import find_shared_folder
 
 if sys.version.startswith('2'):
     input = raw_input  # type: ignore # noqa: E501,F821; pylint: disable=redefined-builtin,undefined-variable,useless-suppression
 
-SHARED_FOLDERS = get_shared_folders_urls()
-
+logger = logging.getLogger(__name__)
 
 # OAuth2 access token.  TODO: login etc.
 def get_parser():
@@ -71,20 +69,6 @@ def main(ap = None, args=None):
     return updown(rootdir, folder, yes, no, default, token=token)
 
 
-def check_downloaded_content_matches(res, fullname):
-
-    name = os.path.basename(fullname)
-
-    with open(fullname) as f:
-        data = f.read()
-    if res == data:
-        print(name, 'is already synced [content match]')
-        return True
-    else:
-        print(name, 'has changed since last sync')
-        return False
-
-
 def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
     """
     
@@ -104,45 +88,62 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None):
         None
     """
 
-    listing = list_folder(dbx, folder, subfolder)
+    
     name = os.path.basename(fullname)
 
     # NOTE
     # if shared is None, figure out whether the file belongs to a Dropbox shared folder
-    # by checking whether folder is a key of SHARED_FOLDERS
+    # by checking whether folder is a key of shared_folders
     # if it is, replace folder with the URL
     # This is needed because the Dropbox API is different
     # if folder is shared (files_download / files_upload)
     # or not (sharing_get_shared_link_file / ?)
+    shared_folders = get_shared_folders_urls()
+    folder_name = folder
     if shared is None:
-        shared = folder in SHARED_FOLDERS
-        if shared:
-            folder = SHARED_FOLDERS[folder]
+        shared = False
+        # shared = folder in shared_folders
         
+        if shared:
+            folder = shared_folders[folder]
+
+
+    listing = list_folder(dbx, folder_name, subfolder, shared=shared)
+    
     if not isinstance(name, six.text_type):
         name = name.decode('utf-8')
     nname = unicodedata.normalize('NFC', name)
+
     if should_be_ignored(name):
         pass
 
     # it's available on dropbox.com -> download or upload
     elif nname in listing:
         if already_synced(fullname, nname, name, listing):
-            print(name, 'is already synced [stats match]')
+            pass
         else:
-            print(name, 'exists with different stats, downloading')
-            res = download(
+            data = download(
                 dbx, folder, subfolder, name,
                 shared=shared
             )
 
-            if not check_downloaded_content_matches(res, fullname):
-                if yesno('Refresh %s' % name, False, args):
-                    upload(
-                        dbx, fullname, folder, subfolder, name,
-                        overwrite=True,
-                        shared=shared
-                    )
+            if os.path.exists(fullname):
+
+                if not check_downloaded_content_matches(data, fullname):
+                    if yesno('Refresh %s' % name, False, args):
+                        upload(
+                            dbx, fullname, folder, subfolder, name,
+                            overwrite=True,
+                            shared=shared
+                        )
+                    else:
+                        save_raw_stream(
+                            fullname, data
+                        )
+            else:
+                save_raw_stream(
+                    fullname, data
+                )              
 
     # it's NOT available on dropbox.com -> upload
     elif yesno('Upload %s' % name, True, args):
@@ -199,13 +200,32 @@ def updown(dbx, rootdir, folder, yes, no, default):
 
     dbx.close()
 
-def list_folder(dbx, folder, subfolder):
+def list_folder(dbx, folder, subfolder, shared=False):
+
+    if shared:
+        list_folder_shared_(dbx, folder, subfolder)
+    
+    else:
+        return list_folder_(dbx, "/"+folder,  subfolder)
+
+def list_folder_shared_(dbx, folder, subfolder):
+
+    ret, res = find_shared_folder(dbx, folder)
+    if ret:
+        folder_id = res.shared_folder_id
+        return list_folder_(dbx, f"id:{folder_id}", subfolder)
+    else:
+        raise Exception("Shared folder not found!")
+
+
+
+def list_folder_(dbx, folder, subfolder):
     """List a folder.
 
     Return a dict mapping unicode filenames to
     FileMetadata|FolderMetadata entries.
     """
-    path = '/%s/%s' % (folder, subfolder.replace(os.path.sep, '/'))
+    path = '%s/%s' % (folder, subfolder.replace(os.path.sep, '/'))
     while '//' in path:
         path = path.replace('//', '/')
     path = path.rstrip('/')
@@ -219,6 +239,9 @@ def list_folder(dbx, folder, subfolder):
         rv = {}
         for entry in res.entries:
             rv[entry.name] = entry
+
+
+        logger.debug(rv)
         return rv
 
 
@@ -289,7 +312,7 @@ class SyncMixin:
             fullname=fullname,
             folder=folder,
             subfolder=subfolder,
-            yesno_args=yesno_args
+            args=yesno_args
         )
 
 

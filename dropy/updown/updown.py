@@ -1,9 +1,11 @@
 import os.path
+import logging
 import datetime
 import time
 import dropbox
 from .utils import stopwatch, format_path
 
+logger = logging.getLogger(__name__)
 
 def download_shared_(dbx, folder, subfolder, name):
 
@@ -18,10 +20,11 @@ def download_shared_(dbx, folder, subfolder, name):
                 path = path
             )
         except dropbox.exceptions.HttpError as err:
-            print('*** HTTP error', err)
+            logger.warning('*** HTTP error', err)
             return None
     data = res.content
-    print(len(data), 'bytes; md:', md)
+    logger.info(len(data), 'bytes')
+    logger.debug('md:', md)
     return data
     
 
@@ -39,11 +42,14 @@ def download_(dbx, folder, subfolder, name):
     with stopwatch('download'):
         try:
             md, res = dbx.files_download(path)
+            logger.info(f"{name} occupies {round(md.size/(1024**2), 2)} MiB. The download may take a while if this number is big")
+            data = res.content
         except dropbox.exceptions.HttpError as err:
-            print('*** HTTP error', err)
+            logger.warning('*** HTTP error', err)
             return None
-    data = res.content
-    print(len(data), 'bytes; md:', md)
+
+    logger.info(len(data), 'bytes')
+    logger.debug('md:', md)
     return data
 
 
@@ -74,9 +80,9 @@ def upload_(dbx, fullname, folder, subfolder, name, overwrite=False):
                     client_modified=datetime.datetime(*time.gmtime(mtime)[:6]),
                     mute=True)
             except dropbox.exceptions.ApiError as err:
-                print('*** API error', err)
+                logger.warning('*** API error', err)
                 return None
-        print('uploaded as', res.name.encode('utf8'))
+        logger.info('uploaded as', res.name.encode('utf8'))
         return res
 
 def upload_shared_(dbx, fullname, folder, subfolder, name, overwrite=False):

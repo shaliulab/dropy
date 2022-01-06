@@ -2,21 +2,10 @@ import os.path
 
 from .utils import stopwatch
 
-def save_raw_stream(dest, data):
-    filehandle = open(dest, "wb", buffering=0)
-    filehandle.write(data)
-    filehandle.close()
+def find_shared_folder(dbx, name):
 
-def save_text_stream(dest, data):
-    filehandle = open(dest, "w")
-    filehandle.write(data)
-    filehandle.close()
-
- 
-def find_folder(dbx, name):
-
-    response = dbx.sharing_list_folders()
-    entries = response.entries
+    res = dbx.sharing_list_folders()
+    entries = res.entries
 
     found = False
     for entry in entries:
