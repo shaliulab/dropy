@@ -10,6 +10,7 @@ import dropbox
 from dropy import DropboxDownloader
 from dropy.oauth.official import get_parser as oauth_get_parser
 from dropy.web_utils import sync
+from dropy.updown.base import sync_file
 import dropy
 
 logger = logging.getLogger(__name__)
@@ -131,12 +132,23 @@ def main(ap=None, args=None):
 
 
     import ipdb; ipdb.set_trace()
+
     joblib.Parallel(n_jobs=-2)(
-        joblib.delayed(sync)(
-            f"Dropbox:{folder_display}/{file}", os.path.join(args.rootdir, subfolder, file)
+        joblib.delayed(sync_file)(
+            fullname=os.path.join(args.rootdir, file),
+            folder=os.path.join(folder_display, os.path.dirname(file)),
+            subfolder="",
+            shared=False,
+            args=argparse.Namespace(yes=True, no=None, default=None)  
         )
             for file in dbfilenames
     )
+    # joblib.Parallel(n_jobs=-2)(
+    #     joblib.delayed(sync)(
+    #         f"Dropbox:{folder_display}/{file}", os.path.join(args.rootdir, subfolder, file)
+    #     )
+    #         for file in dbfilenames
+    # )
 
 
 
