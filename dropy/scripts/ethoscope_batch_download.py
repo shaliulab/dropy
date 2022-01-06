@@ -10,7 +10,7 @@ import dropbox
 from dropy import DropboxDownloader
 from dropy.oauth.official import get_parser as oauth_get_parser
 from dropy.web_utils import sync
-from dropy.utils import unnest
+from dropy.updown.utils import unnest
 from dropy.updown.base import sync_file
 import dropy
 
