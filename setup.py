@@ -12,6 +12,9 @@ setup(
     install_requires=[
         "dropbox",
         "pyaml",
+        "bottle",
+        "cheroot",
+        "cherrypy",
     ],
     entry_points={
         'console_scripts': [
