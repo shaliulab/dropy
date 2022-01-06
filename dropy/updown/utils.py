@@ -100,3 +100,17 @@ def check_downloaded_content_matches(res, fullname):
     else:
         print(name, 'has changed since last sync')
         return False
+
+def unnest(input, output):
+    """
+    Given a list with an arbitrary nesting depth
+    returns a list with no nesting
+    """
+
+    for element in input:
+        if isinstance(element, str):
+            output.append(element)
+        elif isinstance(element, list):
+            unnest(element, output)
+
+    return output

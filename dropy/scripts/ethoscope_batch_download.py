@@ -10,6 +10,7 @@ import dropbox
 from dropy import DropboxDownloader
 from dropy.oauth.official import get_parser as oauth_get_parser
 from dropy.web_utils import sync
+from dropy.utils import unnest
 from dropy.updown.base import sync_file
 import dropy
 
@@ -22,16 +23,6 @@ def get_parser(ap=None):
     ap.add_argument("--metadata")
     return ap
 
-
-def unnest(input, output):
-
-    for element in input:
-        if isinstance(element, str):
-            output.append(element)
-        elif isinstance(element, list):
-            unnest(element, output)
-
-    return output
 
 def get_machine_name(db_file):
 
