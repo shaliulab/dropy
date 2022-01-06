@@ -51,6 +51,7 @@ def sync(source, dest):
         "http://localhost:9000/sync",
         json={
             "source": source, 
-            "dest": dest, 
+            "dest": dest,
+            "yes": True,
         }
     )

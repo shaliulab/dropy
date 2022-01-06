@@ -66,6 +66,8 @@ def sync():
     subfolder = os.path.dirname("/".join(remote_path[2:]))
     fullname = local_path
 
+    print(data)
+
 
     # to download
     dbx.sync_file(
