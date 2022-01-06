@@ -1,9 +1,9 @@
 import logging
+import joblib
 import dropbox
 from dropy.oauth.official import get_access_token
 from .updown import SyncMixin
 logger = logging.getLogger(__name__)
-
 
 class DropboxDownloader(SyncMixin):
 
@@ -70,10 +70,14 @@ class DropboxDownloader(SyncMixin):
             else:
                 logger.warning(f"{entry} is neither a folder nor a file")
 
-        for directory in dirs:
-            res = self.dbx.files_list_folder(directory)
-            files.append(res["files"])
+        output = joblib.Parallel(n_jobs=-2)(
+            joblib.delayed(
+                self.dbx.list_folder
+            )(directory)
+            for directory in dirs
+        )
 
-
+        for entry in output:
+            files.append(entry["files"])
         
         return {"dirs": dirs, "files": files}
