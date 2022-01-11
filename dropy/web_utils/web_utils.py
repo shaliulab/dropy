@@ -84,3 +84,19 @@ def list_folder(folder, recursive):
             f" URL: {url}"
             f" JSON: {data}"
         )
+
+def path_exists(path):
+    
+    session = requests.Session()
+
+    url = "http://localhost:9000/path_exists"
+    data = {
+            "path": path,
+        }
+    res = session.post(url, json=data)
+
+    if res.ok:
+        response = json.loads(res.content.decode())
+        return response[path]
+    else:
+        return False

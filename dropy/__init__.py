@@ -51,6 +51,10 @@ class DropboxDownloader(SyncMixin):
         return self._dropbox_handle.close()
 
 
+
+    def get_metadata(self, path):
+        return self.dbx.files_get_metadata(path)
+
     def list_folder(self, folder, recursive=False):
         """
 

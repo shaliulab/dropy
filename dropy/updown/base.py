@@ -69,8 +69,46 @@ def main(ap = None, args=None):
 
     return updown(rootdir, folder, yes, no, default, token=token)
 
+def sync_folder(dropy_client, fullname, folder, subfolder, args, dest, listing = None, force_download=None):
 
-def sync_file(dbx, fullname, folder, subfolder, args, shared=None, listing = None, force_download=None):
+
+    if dest == "down":
+        fullfolder = os.path.join(folder, subfolder, os.path.basename(fullname))
+        data = dropy_client.list_folder(
+            fullfolder, recursive=True
+        )
+        paths = data["paths"]
+
+        dropbox_folder = fullfolder
+        dropbox_subfolder = ""
+ 
+    elif dest == "up":
+
+        fullfolder = fullname
+        dirlist = [fullname]
+        paths = []
+
+        dropbox_folder = folder
+        dropbox_subfolder = subfolder
+
+        while len(dirlist) > 0:
+            for (dirpath, dirnames, filenames) in os.walk(dirlist.pop()):
+                dirlist.extend(dirnames)
+                paths.extend(map(lambda n: os.path.join(*n), zip([dirpath] * len(filenames), filenames)))
+   
+    for path in paths:
+        filename = path.replace(fullfolder, "").lstrip("/")
+        fullname_one_iter = os.path.join(fullname, filename)
+        
+        sync_file(
+            dropy_client.dbx,
+            fullname = fullname_one_iter,
+            folder = dropbox_folder,
+            subfolder = dropbox_subfolder,
+            args=args
+        )
+
+def sync_file(dbx, fullname, folder, subfolder, args, shared=None, listing = None, force_download=None, dest=None):
     """
 
     Push the contents of fullname to folder/subfolder/name in Dropbox
@@ -108,7 +146,7 @@ def sync_file(dbx, fullname, folder, subfolder, args, shared=None, listing = Non
 
     if not force_download and listing is None:
         try:
-            md = dbx.dbx.files_get_metadata(
+            md = dbx.files_get_metadata(
                 sanitize_path(os.path.join(folder, subfolder, os.path.basename(fullname)))
             )
             listing = {os.path.basename(md.path_display): md}
@@ -313,29 +351,77 @@ class SyncMixin:
     Requires self._dropbox_handler to be set to a dropbox.Dropbox instance
     """
 
-    def sync_folder(self, local_folder, dropbox_folder):
 
-        folder = dropbox_folder
-        rootdir = local_folder
-        return updown(self.dbx, rootdir, folder, yes=None, no=None, default=None)
+    def sync_folder(self, fullname, folder, subfolder, args, **kwargs):
+        
+        return sync_folder(
+            dropy_client=self,
+            fullname=fullname,
+            folder=folder,
+            subfolder=subfolder,
+            args=args,
+            **kwargs
+        )
 
 
-    def sync_file(self, fullname, folder, subfolder, yes=None, no=None, default=None, listing=None, force_download=None):
 
-        yesno_args = argparse.Namespace(yes=yes, no=no, default=default)
+    def sync_file(self, fullname, folder, subfolder, args, **kwargs):
 
         return sync_file(
             dbx=self.dbx,
             fullname=fullname,
             folder=folder,
             subfolder=subfolder,
+            args=args,
+            **kwargs
+            )
+
+    def sync(self, fullname, folder, subfolder,  yes=None, no=None, default=None, force_download=False, listing=None, **kwargs):
+
+        yesno_args = argparse.Namespace(yes=yes, no=no, default=default)
+
+        FUNCS = {"file": self.sync_file, "folder": self.sync_folder}
+
+        if os.path.exists(fullname):
+            if os.path.isdir(fullname):
+                isdir = True
+                isfile = False
+            elif os.path.isfile(fullname):
+                isdir = False
+                isfile = True
+        
+        else:
+            md = self.dbx.files_get_metadata(
+                os.path.join(folder, subfolder, os.path.basename(fullname))
+            )
+
+            if isinstance(md, dropbox.files.FileMetadata):
+                isfile = True
+                isdir = False
+
+            elif isinstance(md, dropbox.files.FolderMetadata):
+                isfile = False
+                isdir = True
+
+        
+        if isfile and not isdir:
+            key = "file"
+
+        elif isdir and not isfile:
+            key = "folder"
+        
+        else:
+            raise Exception("Path is either file and dir or neither file and dir")
+
+        FUNCS[key](
+            fullname=fullname,
+            folder=folder,
+            subfolder=subfolder,
             args=yesno_args,
             listing=listing,
-            force_download=force_download
+            force_download=force_download,
+            **kwargs
         )
-
-
-
 
 if __name__ == '__main__':
     main()

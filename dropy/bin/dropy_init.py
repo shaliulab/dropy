@@ -1,8 +1,10 @@
+import argparse
 import os
 import os.path
 import json
 import logging
 import dropbox
+import threading
 from dropy import DropboxDownloader
 from dropy.oauth.official import get_parser
 from dropy.web_utils import set_server
@@ -50,6 +52,7 @@ def sync():
     if len(source) == 2 and source[0] == "Dropbox" and len(dest) == 1:
         remote_path = source[1]
         local_path = dest[0]
+        dest = "down"
 
         # I only want it to work on download mode
         try:
@@ -62,7 +65,8 @@ def sync():
     elif len(dest) == 2 and dest[0] == "Dropbox" and len(source) == 1:
         remote_path = dest[1]
         local_path = source[0]
-        # I only want it to work in upload mode
+        dest = "up"
+     # I only want it to work in upload mode
         assert os.path.exists(local_path), "Local file does not exist"
 
     assert remote_path.startswith(os.path.sep)
@@ -71,15 +75,21 @@ def sync():
     subfolder = os.path.dirname("/".join(remote_path[2:]))
     fullname = local_path
 
-    print(f"Syncing {fullname} / {folder} {subfolder}")
+    print(
+        "Syncing "
+        f" Fullname {fullname}"
+        f" Folder {folder}"
+        f"  Subfolder {subfolder}")
 
     # to download
-    dbx.sync_file(
+    dbx.sync(
         fullname,
         folder,
         subfolder,
+        dest=dest,
         **data
     )
+
 
 @api.post("/list_folder")
 def list_folder():
@@ -88,6 +98,22 @@ def list_folder():
     res = dbx.list_folder(**data)
     return res
 
+@api.post("/path_exists")
+def path_exists():
+    data = load_data(bottle)
+
+    try:
+        md = dbx.get_metadata(
+           data["path"]
+        )
+        if isinstance(md, dropbox.files.FileMetadata):
+            return {data["path"]: True}
+        elif isinstance(md, dropbox.files.FolderMetadata):
+            return {data["path"]: True}
+
+    except:
+        return {data["path"]: False}
+    
 
 @api.get("/info")
 def info():
@@ -100,7 +126,21 @@ def close(exit_status=0):
     dbx.close()
     os._exit(exit_status)
 
+class BackgroundDropy(threading.Thread):
 
+    def __init__(self, credentials, *args, name="dropy", daemon=True, **kwargs):
+        self._credentials = credentials
+        kwargs.update({"daemon": daemon, "name": name})
+        super().__init__(*args, **kwargs)
+
+    def run(self):
+
+        print(self._credentials)
+
+        main(ap=None, args=argparse.Namespace(
+            **self._credentials,
+            )
+        )
 
 if __name__ == "__main__":
     main()
