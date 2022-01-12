@@ -73,7 +73,7 @@ def sync_folder(dropy_client, fullname, folder, subfolder, args, dest, listing =
 
 
     if dest == "down":
-        fullfolder = os.path.join(folder, subfolder, os.path.basename(fullname))
+        fullfolder = os.path.join(folder, subfolder, os.path.basename(fullname.rstrip("/")))
         data = dropy_client.list_folder(
             fullfolder, recursive=True
         )
