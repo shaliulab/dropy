@@ -48,7 +48,7 @@ def set_server(host="0.0.0.0", port=9000):
 
     return api, bottle, server
 
-def sync(source, dest, download=False):
+def sync(source, dest, force_download=False, skip_existing_files=False):
 
     session = requests.Session()
 
@@ -58,7 +58,8 @@ def sync(source, dest, download=False):
             "source": source,
             "dest": dest,
             "yes": True,
-            "force_download": download
+            "force_download": force_download,
+            "skip_existing_files": skip_existing_files
         }
     )
 

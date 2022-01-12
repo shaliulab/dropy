@@ -15,6 +15,9 @@ setup(
         "bottle",
         "cheroot",
         "cherrypy",
+        "joblib",
+        "numpy",
+        "pandas",
         "ipdb",
     ],
     entry_points={
@@ -23,6 +26,7 @@ setup(
             'dropy-batch=dropy.bin.dropy_batch:main',
             'dropy-init=dropy.bin.dropy_init:main',
             'dropy-interactive=dropy.bin.dropy_interactive:main',
+            'dropy-ethoscope=dropy.scripts.ethoscope_batch_download:main',
             'dropy=dropy.bin.dropy:main',
         ]
     },
