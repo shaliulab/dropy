@@ -101,9 +101,6 @@ def main(ap=None, args=None):
     else:
         metadata = pd.read_csv(args.metadata)[["machine_name", "date"]]
         metadata.drop_duplicates(inplace=True)
-
-        #with open("dbfiles.pkl", "wb") as fh: pickle.dump(dbfiles, fh)
-        #with open("dbfiles.pkl", "rb") as fh: dbfiles = pickle.load(fh)
         dbfiles = match_ethoscope_metadata(dbfiles, metadata)
 
 
@@ -113,18 +110,6 @@ def main(ap=None, args=None):
 
     dbfilenames = [dbfile.replace(folder_display, "") for dbfile in dbfiles]
 
-    #joblib.Parallel(n_jobs=args.ncores)(
-    #    joblib.delayed(sync_file)(
-    #        dbx=dbx.dbx,
-    #        fullname=os.path.join(args.rootdir, file),
-    #        folder=os.path.join(folder_display, os.path.dirname(file)),
-    #        subfolder="",
-    #        shared=False,
-    #        args=argparse.Namespace(yes=True, no=None, default=None)
-    #    )
-    #        for file in dbfilenames
-    #)
-
     sync_args = [
         (
             sanitize_path(f"Dropbox:{folder_display}/{file}"),
@@ -133,12 +118,16 @@ def main(ap=None, args=None):
         for file in dbfilenames
     ]
 
-    joblib.Parallel(n_jobs=args.ncores)(
-        joblib.delayed(sync)(
-            *sync_arg
+    if args.ncores == 1:
+        for sync_arg in sync_args:
+            sync(*sync_arg)
+    else:
+        joblib.Parallel(n_jobs=args.ncores)(
+            joblib.delayed(sync)(
+                *sync_arg
+            )
+                for sync_arg in sync_args
         )
-            for sync_arg in sync_args
-    )
 
 
 

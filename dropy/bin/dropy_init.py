@@ -13,6 +13,7 @@ import dropbox
 logger = logging.getLogger(__name__)
 logging.getLogger("dropy.updown.utils").setLevel(logging.DEBUG)
 logging.getLogger("dropy.updown.base").setLevel(logging.DEBUG)
+logging.getLogger("dropy").setLevel(logging.DEBUG)
 
 DEBUG = True
 PORT = 9000

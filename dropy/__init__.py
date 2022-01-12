@@ -5,9 +5,8 @@ import time
 import dropbox
 from dropy.oauth.official import get_access_token
 from dropy.core.data import Entry
-from .updown import SyncMixin
+from dropy.updown import SyncMixin
 logger = logging.getLogger(__name__)
-
 LIMIT = 500
 
 
@@ -82,7 +81,7 @@ class DropboxDownloader(SyncMixin):
             logger.info(f"{len(folder_result.entries)} entries downloaded")
             print(f"{len(folder_result.entries)} entries downloaded")
             logger.debug("calling list_folder_continue. length of entries = {len(entries)}")
-            print(f"calling list_folder_continue. length of entries = {len(entries)}")
+            logger.debug(f"calling list_folder_continue. length of entries = {len(entries)}")
             folder_result = self.dbx.files_list_folder_continue(folder_result.cursor)
             for entry in folder_result.entries:
                 entries[entry.name] = entry
