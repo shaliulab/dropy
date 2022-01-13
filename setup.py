@@ -25,9 +25,9 @@ setup(
             'dropy-legacy=dropy.bin.dropy_legacy:main',
             'dropy-batch=dropy.bin.dropy_batch:main',
             'dropy-init=dropy.bin.dropy_init:main',
-            'dropy-interactive=dropy.bin.dropy_interactive:main',
-            'dropy-ethoscope=dropy.scripts.ethoscope_batch_download:main',
             'dropy=dropy.bin.dropy:main',
+            'dropy-interactive=dropy.bin.dropy_interactive:main',
+            'dropy-ethoscope=dropy.bin.ethoscope.dropy:main',
         ]
     },
     setup_requires=['flake8'],
