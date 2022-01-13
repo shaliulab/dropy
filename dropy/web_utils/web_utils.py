@@ -51,7 +51,7 @@ def set_server(host="0.0.0.0", port=9000):
 
     return api, bottle, server
 
-def sync(source, dest, force_download=False, skip_existing_files=False, port=9000, ncores=1):
+def sync(source, dest, force_download=False, skip_existing_files=False, port=9000, recursive=True, ncores=1):
     f"""POST request a file between your local computer and the Dropbox server
     
     Arguments:
@@ -84,7 +84,8 @@ def sync(source, dest, force_download=False, skip_existing_files=False, port=900
             "yes": True,
             # "force_download": force_download,
             "skip_existing_files": skip_existing_files,
-            "ncores": ncores
+            "ncores": ncores,
+            "recursive": recursive,
         }
     )
 

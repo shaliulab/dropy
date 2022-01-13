@@ -74,7 +74,7 @@ def main(ap = None, args=None):
 
 def sync_folder_(
     dbx_handler, fullname, folder, subfolder, args, direction, listing = None,
-    skip_existing_files=False, force_download=False, ncores=1
+    skip_existing_files=False, force_download=False, ncores=1, recursive=True,
 ):
 
     """Make sure the content of a remote folder and a local folder match
@@ -113,7 +113,7 @@ def sync_folder_(
         dropbox_rootdir = os.path.join(folder, subfolder)
         dropbox_folder = os.path.join(dropbox_rootdir, folder_name)
         data = dbx_handler.list_folder(
-            dropbox_folder, recursive=True, ncores=ncores
+            dropbox_folder, recursive=recursive, ncores=ncores
         )
 
         paths = [p.replace(dropbox_rootdir, rootdir) for p in data["paths"].keys()]
@@ -516,6 +516,7 @@ class SyncMixin:
         
         if key == "file":
             kwargs.pop("direction", None)
+            kwargs.pop("recursive", None)
 
         FUNCS[key](
             fullname=fullname,

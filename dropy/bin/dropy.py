@@ -9,9 +9,11 @@ logging.getLogger("dropy.updown.base").setLevel(logging.DEBUG)
 def get_parser(ap=None):
     if ap is None:
         ap = argparse.ArgumentParser()
+
     ap.add_argument("source")
     ap.add_argument("dest")
     ap.add_argument("--skip-existing-files", action="store_true", default=False, dest="skip_existing_files")
+    ap.add_argument("--recursive", action="store_true", default=False, dest="recursive")
     ap.add_argument("--ncores", default=1, type=int)
     
     return ap
@@ -27,7 +29,8 @@ def main(args=None):
     sync(
         source, dest,
         skip_existing_files=args.skip_existing_files,
-        ncores=args.ncores
+        ncores=args.ncores,
+        recursive=args.recursive,
     )
 
 
