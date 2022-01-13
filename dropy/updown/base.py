@@ -517,6 +517,7 @@ class SyncMixin:
         if key == "file":
             kwargs.pop("direction", None)
             kwargs.pop("recursive", None)
+            kwargs.pop("ncores", None)
 
         FUNCS[key](
             fullname=fullname,
