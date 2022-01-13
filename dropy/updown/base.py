@@ -280,7 +280,7 @@ def updown(dbx, rootdir, folder, yes, no, default):
 def list_folder(dbx, folder, subfolder, shared=False):
 
     if shared:
-        list_folder_shared_(dbx, folder, subfolder)
+        return list_folder_shared_(dbx, folder, subfolder)
 
     else:
         return list_folder_(dbx, "/"+folder,  subfolder)

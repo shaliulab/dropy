@@ -76,8 +76,17 @@ def list_folder(folder, recursive):
 
     if res.ok:
         response = json.loads(res.content.decode())
-        response["files"] = {k: Entry(client_modified = v["client_modified"], size = v["size"]) for k, v in response["files"].items()}
-        response["paths"] = {k: Entry(client_modified = v["client_modified"], size = v["size"]) for k, v in response["paths"].items()}
+        files = {}
+        paths = {}
+        for k, v in response["files"].items():
+            files[k] = Entry(client_modified = v.client_modified, size = v.size)
+
+        for k, v in response["paths"].items():
+            paths[k] = Entry(client_modified = v.client_modified, size = v.size)
+
+        response["files"] = files
+        response["files"] = paths
+
         return response
     else:
         logger.warning(

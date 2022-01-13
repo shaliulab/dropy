@@ -22,6 +22,8 @@ def get_parser(ap=None):
     ap.add_argument("--rootdir", required=True) # "/Data/ethoscope/2022-01-04_ethoscope_data/results"
     ap.add_argument("--metadata")
     ap.add_argument("--ncores", default=5, type=int)
+    ap.add_argument("--skip-existing-files", default=False, action="store_true", dest="skip_existing_files")
+    ap.add_argument("--force-download", default=False, action="store_true", dest="force_download")
     return ap
 
 
@@ -70,6 +72,12 @@ def main(ap=None, args=None):
     if args is None:
         ap = get_parser(ap)
         args = ap.parse_args()
+
+
+    kwargs = {
+        "skip_existing_files": args.skip_existing_files,
+        "force_download": args.force_download,
+    }
 
     folder_display = args.folder.replace("/./", "/")
     subfolder = args.folder.split("/./")
@@ -120,11 +128,11 @@ def main(ap=None, args=None):
 
     if args.ncores == 1:
         for sync_arg in sync_args:
-            sync(*sync_arg)
+            sync(*sync_arg, **kwargs)
     else:
         joblib.Parallel(n_jobs=args.ncores)(
             joblib.delayed(sync)(
-                *sync_arg
+                *sync_arg, **kwargs
             )
                 for sync_arg in sync_args
         )
