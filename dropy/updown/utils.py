@@ -11,14 +11,14 @@ import dropbox
 logger = logging.getLogger(__name__)
 
 @contextlib.contextmanager
-def stopwatch(message):
+def stopwatch(message, dropbox_name, local_name):
     """Context manager to print how long a block of code took."""
     t0 = time.time()
     try:
         yield
     finally:
         t1 = time.time()
-        print('Total elapsed time for %s: %.3f' % (message, t1 - t0))
+        print('Total elapsed time to download %s for %s: %.3f' % (local_name, message, t1 - t0))
 
 
 def should_be_ignored(name):
@@ -36,12 +36,17 @@ def should_be_ignored(name):
 
 
 def already_synced(fullname, nname, name, listing):
+
+    if listing is None:
+        print(name, 'has no listing. Ignoring')
+        return True
+
     md = listing[nname]
     if os.path.exists(fullname):
         mtime = os.path.getmtime(fullname)
         mtime_dt = datetime.datetime(*time.gmtime(mtime)[:6])
         size = os.path.getsize(fullname)
-        print(md)
+
         if isinstance(md, dropbox.files.FileMetadata) and mtime_dt == md.client_modified and size == md.size:
             print(name, 'is already synced [stats match]')
             return True

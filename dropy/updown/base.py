@@ -8,10 +8,13 @@ from __future__ import print_function
 import argparse
 import logging
 import os
+import traceback
+
 import six
 import sys
 import unicodedata
 import dropbox
+import joblib
 
 from .utils import stopwatch, should_be_ignored, already_synced, get_shared_folders_urls, save_raw_stream, check_downloaded_content_matches, sanitize_path
 from .updown import upload, download
@@ -69,74 +72,165 @@ def main(ap = None, args=None):
 
     return updown(rootdir, folder, yes, no, default, token=token)
 
-def sync_folder(
-    dropy_client, fullname, folder, subfolder, args, dest, listing = None,
-    skip_existing_files=False, force_download=False
+def sync_folder_(
+    dbx_handler, fullname, folder, subfolder, args, direction, listing = None,
+    skip_existing_files=False, force_download=False, ncores=1
 ):
 
+    """Make sure the content of a remote folder and a local folder match
 
-    if dest == "down":
-        fullfolder = os.path.join(folder, subfolder, os.path.basename(fullname.rstrip("/")))
-        data = dropy_client.list_folder(
-            fullfolder, recursive=True
+    Arguments:
+        dbx_handler (dropy.DropboxHandler): An OAUTH authenticated DropboxHandler instance
+        fullname (str): Path in local computer to be synced to Dropbox. It may or not exist
+        folder (str): Root folder being synced to Dropbox ("/foo")
+        subfolder (str): Folder where the folder to be synced lives, relative to the root folder ("bar")
+        args: (argparse.Namespace): namespace with defined yes no and default values.
+            Used to establish whether the user is prompted and with what default answer
+        direction (str): Either up or down
+        skip_existing_files (bool):
+            * If True and in download mode, existing files are skipped
+            * If True and in upload mode, TODO
+
+        ncores (int): number of CPUs to use in listing and syncing of files
+
+    Return: None
+
+    All contents of fullname will reflect those in the dropbox folder folder/subfolder/folder_name
+    where folder_name is the os.path.basename(fullname)    
+    """
+
+    if direction == "up" and skip_existing_files:
+        raise NotImplementedError
+
+    # TODO Remove all force_download and then remove **kwargs, which is there
+    # just to accept this unused variable
+
+    if direction == "down":
+        folder_name = os.path.basename(fullname.rstrip("/"))
+        rootdir = os.path.dirname(fullname.rstrip("/"))
+        mirrored_folder = fullname
+
+        dropbox_rootdir = os.path.join(folder, subfolder)
+        dropbox_folder = os.path.join(dropbox_rootdir, folder_name)
+        data = dbx_handler.list_folder(
+            dropbox_folder, recursive=True, ncores=ncores
         )
-        paths = data["paths"]
 
-        dropbox_folder = fullfolder
-        dropbox_subfolder = ""
+        paths = [p.replace(dropbox_rootdir, rootdir) for p in data["paths"].keys()]
  
-    elif dest == "up":
+    elif direction == "up":
+        # TODO Not tested
+        raise NotImplementedError
 
         fullfolder = fullname
         dirlist = [fullname]
         paths = []
 
         dropbox_folder = folder
-        dropbox_subfolder = subfolder
 
         while len(dirlist) > 0:
             for (dirpath, dirnames, filenames) in os.walk(dirlist.pop()):
                 dirlist.extend(dirnames)
                 paths.extend(map(lambda n: os.path.join(*n), zip([dirpath] * len(filenames), filenames)))
-   
-    for path in paths:
-        filename = path.replace(fullfolder, "").lstrip("/")
-        fullname_one_iter = os.path.join(fullname, filename)
+
+        fullnames = []
+        for path in paths:
+            filename = path.replace(fullfolder, "").lstrip("/")
+            fullnames.append(os.path.join(fullname, filename))
         
-        sync_file(
-            dropy_client.dbx,
-            fullname = fullname_one_iter,
-            folder = dropbox_folder,
-            subfolder = dropbox_subfolder,
-            force_download=force_download,
-            skip_existing_files=skip_existing_files,
-            args=args
+        paths = fullnames
+
+    return sync_files(
+        dbx_handler.dbx,
+        paths,
+        dropbox_folder,
+        mirrored_folder,
+        args,
+        ncores=ncores,
+        skip_existing_files=skip_existing_files,
+    )
+
+def sync_files(dbx, paths, folder, rootdir, args, ncores=1, **kwargs):
+
+
+    subfolders = []
+    for i, path in enumerate(paths):
+        subfolders.append(os.path.dirname(paths[i]).replace(rootdir, "").lstrip("/"))
+
+
+    if ncores == 1:
+        for i, path in enumerate(paths):
+            sync_file_(
+                dbx,
+                fullname = paths[i],
+                folder = folder,
+                subfolder = subfolders[i],
+                args=args,
+                **kwargs
+            )
+
+    else:
+
+        joblib.Parallel(n_jobs=ncores)(
+            joblib.delayed(sync_file_)(
+                dbx,
+                paths[i],
+                folder,
+                subfolders[i],
+                args=args,
+                **kwargs
+            )
+            for i, _ in enumerate(paths)
         )
 
-def sync_file(
-    dbx, fullname, folder, subfolder, args,
-    shared=None, listing = None, force_download=False, skip_existing_files=False, dest=None
-    ):
-    """
+    return None
+        
+    
+    # for path in paths:
+    #     filename = path.replace(fullfolder, "").lstrip("/")
+    #     fullname_one_iter = os.path.join(fullname, filename)
+        
+    #     sync_file_(
+    #         dbx_handler.dbx,
+    #         fullname = fullname_one_iter,
+    #         folder = dropbox_folder,
+    #         subfolder = dropbox_subfolder,
+    #         skip_existing_files=skip_existing_files,
+    #         args=args
+    #     )
 
-    Push the contents of fullname to folder/subfolder/name in Dropbox
+    return None
+
+def sync_file_(
+    dbx, fullname, folder, subfolder, args,
+    shared=None, listing = None, force_download=False,
+    skip_existing_files=False, skip_listing=False
+    ):
+
+    """Push the contents of fullname to folder/subfolder/name in Dropbox
     or bring the content of folder/subfolder/name to fullname
 
-    Args:
+    Arguments:
         dbx (dropbox.Dropbox): Authenticated dropbox handler
-        fullname (str): Path in local computer to be synced to dropbox
+        fullname (str): Path in local computer to be synced to Dropbox. It may or not exist
         folder (str): Folder being synced to dropbox
         subfolder (str): Folder living inside folder that is currently being synced
         listing (dict): Files available in Dropbox website
-        args (namespace): must contain no, yes, default
+        args (argparse.Namespace): must contain no, yes, default
         **kwargs (dict): additional keyword arguments to upload and download
 
-    Returns:
+    Return:
         None
     """
 
 
     name = os.path.basename(fullname)
+    if not isinstance(name, six.text_type):
+        name = name.decode('utf-8')
+    nname = unicodedata.normalize('NFC', name)
+
+    if should_be_ignored(name):
+        return None
 
     # NOTE
     # if shared is None, figure out whether the file belongs to a Dropbox shared folder
@@ -152,48 +246,29 @@ def sync_file(
     fullfolder = os.path.join(folder_name, subfolder)
     if not fullfolder.endswith("/"): fullfolder += "/"
 
-    if not force_download and listing is None:
+    if not skip_listing and listing is None:
         try:
-            md = dbx.files_get_metadata(
-                sanitize_path(os.path.join(folder, subfolder, os.path.basename(fullname)))
-            )
+            path = sanitize_path(os.path.join(folder, subfolder, name))
+            md = dbx.files_get_metadata(path)
+            
             listing = {os.path.basename(md.path_display): md}
             listing = {file.replace(fullfolder, ""): listing[file] for file in listing}
-        except:
-            listing = {}
+        except Exception as error:
+            logger.warning(error)
+            logger.warning(traceback.print_exc())
+            raise Exception(f"Could not query {path} to get a listing for {fullname}")
 
-    if listing is None:
-        if force_download:
-            logger.warning(f"Could not get a listing for file {fullname}")
-            is_synced=False
-            listing = None
-        else:
-            raise Exception(f"Could not get a listing for file {fullname}")
-
-
-    if not isinstance(name, six.text_type):
-        name = name.decode('utf-8')
-    nname = unicodedata.normalize('NFC', name)
-
-    print(nname)
-    if should_be_ignored(name):
-        pass
 
     # it's available on dropbox.com -> download or upload
-    elif force_download or nname in listing:
-        if skip_existing_files and force_download:
-            if os.path.exists(fullname):
-                is_synced=True
-            else:
-                if listing is None:
-                    is_synced=False
-                else:
-                    is_synced = already_synced(fullname, nname, name, listing)
+    if listing is None or nname in listing:
+        if skip_existing_files and os.path.exists(fullname):
+            is_synced=True
         else:
             is_synced = already_synced(fullname, nname, name, listing)
         
         if is_synced:
-            pass
+            return listing
+
         else:
             data = download(
                 dbx, folder, subfolder, name,
@@ -256,7 +331,7 @@ def updown(dbx, rootdir, folder, yes, no, default):
         # First do all the files.
         for name in files:
             fullname = os.path.join(dn, name)
-            sync_file(dbx, fullname, folder, subfolder, yesno_args)
+            sync_file_(dbx, fullname, folder, subfolder, yesno_args)
 
 
         # Then choose which subdirectories to traverse.
@@ -376,8 +451,8 @@ class SyncMixin:
 
     def sync_folder(self, fullname, folder, subfolder, args, **kwargs):
         
-        return sync_folder(
-            dropy_client=self,
+        return sync_folder_(
+            dbx_handler=self,
             fullname=fullname,
             folder=folder,
             subfolder=subfolder,
@@ -389,7 +464,7 @@ class SyncMixin:
 
     def sync_file(self, fullname, folder, subfolder, args, **kwargs):
 
-        return sync_file(
+        return sync_file_(
             dbx=self.dbx,
             fullname=fullname,
             folder=folder,
@@ -437,6 +512,10 @@ class SyncMixin:
         
         else:
             raise Exception("Path is either file and dir or neither file and dir")
+
+        
+        if key == "file":
+            kwargs.pop("direction", None)
 
         FUNCS[key](
             fullname=fullname,

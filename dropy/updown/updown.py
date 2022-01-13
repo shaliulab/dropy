@@ -13,7 +13,7 @@ def download_shared_(dbx, folder, subfolder, name):
         '%s/%s' % (subfolder.replace(os.path.sep, '/'), name)
     )
 
-    with stopwatch('download'):
+    with stopwatch('download', None, None):
         try:
             md, res = dbx.sharing_get_shared_link_file(
                 url = folder,
@@ -30,27 +30,46 @@ def download_shared_(dbx, folder, subfolder, name):
 
 
 def download_(dbx, folder, subfolder, name):
-    """Download a file.
+    """
+    Download a file existing in Dropbox under `os.path.join(folder, subfolder, name)`
 
-    Return the bytes of the file, or None if it doesn't exist.
+
+    Arguments:
+        folder (str):
+        subfolder (str):
+        name (str):
+
+    
+    Return:
+        Bytes of the file, or None if the file does not exist.
     """
 
     path = format_path(
         '/%s/%s/%s' % (folder, subfolder.replace(os.path.sep, '/'), name)
     )
 
-    with stopwatch('download'):
+    with stopwatch('download', os.path.join(folder, subfolder), name):
         try:
             md, res = dbx.files_download(path)
-            logger.info(f"{name} occupies {round(md.size/(1024**2), 2)} MiB. The download may take a while if this number is big")
-            data = res.content
+
         except dropbox.exceptions.HttpError as err:
             logger.warning('*** HTTP error', err)
             return None
 
-    logger.info(len(data), 'bytes')
-    logger.debug('md:', md)
-    return data
+        except dropbox.exceptions.ApiError as err:
+            import ipdb; ipdb.set_trace()
+        
+        except Exception as err:
+            import ipdb; ipdb.set_trace()
+
+        else:
+            logger.info(f"{name} occupies {round(md.size/(1024**2), 2)} MiB. The download may take a while if this number is big")
+            data = res.content
+            logger.info(len(data), 'bytes')
+            logger.debug('md:', md)
+            return data
+        
+        return None
 
 
 def download(dbx, folder, subfolder, name, shared=False):
@@ -73,7 +92,7 @@ def upload_(dbx, fullname, folder, subfolder, name, overwrite=False):
         mtime = os.path.getmtime(fullname)
         with open(fullname, 'rb') as f:
             data = f.read()
-        with stopwatch('upload %d bytes' % len(data)):
+        with stopwatch('upload %d bytes' % len(data), None, None):
             try:
                 res = dbx.files_upload(
                     data, path, mode,

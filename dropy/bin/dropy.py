@@ -12,7 +12,8 @@ def get_parser(ap=None):
     ap.add_argument("source")
     ap.add_argument("dest")
     ap.add_argument("--skip-existing-files", action="store_true", default=False, dest="skip_existing_files")
-    ap.add_argument("--force-download", action="store_true", default=False, dest="force_download")
+    ap.add_argument("--ncores", default=1, type=int)
+    
     return ap
 
 def main(args=None):
@@ -25,8 +26,8 @@ def main(args=None):
     dest = args.dest
     sync(
         source, dest,
-        force_download=args.force_download,
         skip_existing_files=args.skip_existing_files,
+        ncores=args.ncores
     )
 
 

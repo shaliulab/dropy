@@ -5,10 +5,10 @@ import json
 import logging
 import dropbox
 import threading
-from dropy import DropboxDownloader
+from dropy import DropboxHandler
 from dropy.oauth.official import get_parser
-from dropy.web_utils import set_server
-import dropbox
+from dropy.web_utils import set_server, format_to_dropbox_api
+from dropy.constants import DROPBOX_PREFIX, REMOTE_SEP
 
 logger = logging.getLogger(__name__)
 logging.getLogger("dropy.updown.utils").setLevel(logging.DEBUG)
@@ -26,7 +26,7 @@ def main(ap=None, args=None):
         args = ap.parse_args()
 
     global dbx
-    dbx = DropboxDownloader(
+    dbx = DropboxHandler(
         app_key=args.app_key,
         app_secret=args.app_secret
     )
@@ -42,52 +42,22 @@ def load_data(bottle):
 
 @api.post("/sync")
 def sync():
-    # data = bottle.request.body.read()
-    # data = json.loads(data)
+    """Process the requested data and sync with Dropbox accordingly 
+    
+    """
     data = load_data(bottle)
-    print(data)
-
-    source = data.pop("source").split(":")
-    dest = data.pop("dest").split(":")
-
-    if len(source) == 2 and source[0] == "Dropbox" and len(dest) == 1:
-        remote_path = source[1]
-        local_path = dest[0]
-        dest = "down"
-
-        # I only want it to work on download mode
-        try:
-            md = dbx.dbx.files_get_metadata(
-                path = remote_path
-            )
-        except dropbox.exceptions.ApiError:
-            raise Exception (f"{remote_path} does not exist on Dropbox server")
-
-    elif len(dest) == 2 and dest[0] == "Dropbox" and len(source) == 1:
-        remote_path = dest[1]
-        local_path = source[0]
-        dest = "up"
-     # I only want it to work in upload mode
-        assert os.path.exists(local_path), "Local file does not exist"
-
-    assert remote_path.startswith(os.path.sep)
-    remote_path = remote_path.split(os.path.sep)
-    folder = "/".join(remote_path[:2])
-    subfolder = os.path.dirname("/".join(remote_path[2:]))
-    fullname = local_path
-
-    print(
-        "Syncing "
-        f" Fullname {fullname}"
-        f" Folder {folder}"
-        f"  Subfolder {subfolder}")
+    fullname, folder, subfolder, direction = format_to_dropbox_api(
+        dbx,
+        data.pop("source"),
+        data.pop("dest"),
+    )
 
     # to download
     dbx.sync(
         fullname,
         folder,
         subfolder,
-        dest=dest,
+        direction=direction,
         **data
     )
 

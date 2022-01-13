@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import dropbox
-from dropy import DropboxDownloader
+from dropy import DropboxHandler
 from dropy.web_utils import sync, list_folder
 from dropy.updown.utils import unnest, sanitize_path
 from dropy.updown.base import sync_file

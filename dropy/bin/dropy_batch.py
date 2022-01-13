@@ -2,7 +2,7 @@ import argparse
 import os.path
 import logging
 import dropbox
-from dropy import DropboxDownloader
+from dropy import DropboxHandler
 from dropy.oauth.official import get_parser as get_oauth_parser
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def main(args=None):
         args = ap.parse_args()
 
 
-    dbx = DropboxDownloader(
+    dbx = DropboxHandler(
         app_key=args.app_key,
         app_secret=args.app_secret
     )

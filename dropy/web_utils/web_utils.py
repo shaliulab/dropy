@@ -1,8 +1,11 @@
 import json
+import os.path
 import logging
 import requests
 import bottle
+import dropbox
 from dropy.core.data import Entry
+from dropy.constants import DROPBOX_PREFIX, REMOTE_SEP 
 
 logger = logging.getLogger(__name__)
 
@@ -48,18 +51,40 @@ def set_server(host="0.0.0.0", port=9000):
 
     return api, bottle, server
 
-def sync(source, dest, force_download=False, skip_existing_files=False):
+def sync(source, dest, force_download=False, skip_existing_files=False, port=9000, ncores=1):
+    f"""POST request a file between your local computer and the Dropbox server
+    
+    Arguments:
+        source (str): Path to the original file in either Dropbox or your local pc. It **must** exist
+        dest (str): Path to the destination file in either Dropbox or your local pc. It **may** exist
+        skip_existing_files (bool):
+            * If True and in download mode, existing files are skipped
+            * If True and in upload mode, TODO
+
+    
+    Return:
+        * When syncing a folder: None
+        * When syncing a file: the file's Dropbox listing
+
+       
+    A path available in Dropbox must have the {DROPBOX_PREFIX}{REMOTE_SEP} prefix
+    A running server spawned with `dropy-init --app-key <APP_KEY> --app-secret <APP_SECRET> should be running under port 9000
+    """
+
+    if f"{DROPBOX_PREFIX}{REMOTE_SEP}" in dest and skip_existing_files:
+        raise NotImplementedError
 
     session = requests.Session()
 
     return session.post(
-        "http://localhost:9000/sync",
+        f"http://localhost:{port}/sync",
         json={
             "source": source,
             "dest": dest,
             "yes": True,
-            "force_download": force_download,
-            "skip_existing_files": skip_existing_files
+            # "force_download": force_download,
+            "skip_existing_files": skip_existing_files,
+            "ncores": ncores
         }
     )
 
@@ -110,3 +135,53 @@ def path_exists(path):
         return response[path]
     else:
         return False
+
+
+def format_to_dropbox_api(dbx_handler, source, dest):
+    """Given a source and a dest file or folder, format this information
+    so it is compatible with the Dropbox API
+
+    Arguments:
+        dbx_handler (dropy.DropboxHandler): An OAUTH authenticated DropboxHandler instance
+        source (str): Path to the original file in either Dropbox or your local pc. It **must** exist
+        dest (str): Path to the destination file in either Dropbox or your local pc. It **may** exist
+    
+    """
+    source = source.split(REMOTE_SEP)
+    dest = dest.split(REMOTE_SEP)
+
+    if len(source) == 2 and source[0] == DROPBOX_PREFIX and len(dest) == 1:
+        remote_path = source[1]
+        local_path = dest[0]
+        direction = "down"
+
+        # I only want it to work on download mode
+        try:
+            md = dbx_handler.dbx.files_get_metadata(
+                path = remote_path
+            )
+        except dropbox.exceptions.ApiError:
+            raise Exception (f"{remote_path} does not exist on Dropbox server")
+
+    elif len(dest) == 2 and dest[0] == DROPBOX_PREFIX and len(source) == 1:
+        remote_path = dest[1]
+        local_path = source[0]
+        direction = "up"
+     # I only want it to work in upload mode
+        assert os.path.exists(local_path), "Local file does not exist"
+
+    assert remote_path.startswith(os.path.sep)
+    remote_path = remote_path.split(os.path.sep)
+    folder = "/".join(remote_path[:2])
+    subfolder = os.path.dirname("/".join(remote_path[2:]))
+    fullname = local_path
+    
+    logger.debug(
+        "Syncing "
+        f" Fullname {fullname}"
+        f" Folder {folder}"
+        f"  Subfolder {subfolder}"
+    )
+
+    return fullname, folder, subfolder, direction
+

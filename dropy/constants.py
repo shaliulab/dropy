@@ -1,0 +1,2 @@
+DROPBOX_PREFIX="Dropbox"
+REMOTE_SEP=":"
