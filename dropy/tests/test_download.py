@@ -1,5 +1,5 @@
 import unittest
-import argparse
+import subprocess
 import requests
 import shutil
 import os
@@ -20,25 +20,48 @@ class TestDownload(unittest.TestCase):
 
     
     def test_download_file(self):
+
         wd = os.getcwd()
+        dest = os.path.join(wd, "tests/results/setup.py")
+        assert not os.path.exists(dest)
+        
         sync(
             "Dropbox:/Antonio/FSLLab/Projects/DropboxAPI/dropy/setup.py",
-            os.path.join(wd, "tests/results/setup.py")
+            dest
         )
 
-        assert os.path.exists("tests/results/setup.py")
-        os.remove("tests/results/setup.py")
+        self.assertTrue(os.path.exists(dest))
+        os.remove(dest)
     
     def test_download_folder(self):
         wd = os.getcwd()
+        dest = os.path.join(wd, "tests/results/dropy/bin")
+        assert not os.path.exists(dest)
+
         sync(
             "Dropbox:/Antonio/FSLLab/Projects/DropboxAPI/dropy/dropy/bin",
-            os.path.join(wd, "tests/results/dropy/bin")
+            dest
         )
         
-        assert os.path.exists("tests/results/dropy/bin")
-        assert os.path.exists("tests/results/dropy/bin/dropy.py")
-        shutil.rmtree("tests/results/dropy")
+        self.assertTrue(os.path.exists(dest))
+        self.assertTrue(os.path.exists(os.path.join(dest, "dropy.py")))
+        shutil.rmtree(dest)
+
+    def test_cli(self):
+        wd = os.getcwd()
+        dest = os.path.join(wd, "tests/results/setup.py")
+        assert not os.path.exists(dest)
+
+        process = subprocess.Popen([
+            "dropy",
+            "Dropbox:/Antonio/FSLLab/Projects/DropboxAPI/dropy/setup.py",
+            dest
+        ])
+        process.communicate()
+        self.assertTrue(os.path.exists(dest))
+        os.remove(dest)
+
+
 
 if __name__ == "__main__":
     unittest.main()

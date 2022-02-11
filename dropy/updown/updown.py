@@ -82,6 +82,7 @@ def download(dbx, folder, subfolder, name, shared=False):
 
 
 def upload_(dbx, fullname, folder, subfolder, name, overwrite=False):
+
         path = format_path(
             '/%s/%s/%s' % (folder, subfolder.replace(os.path.sep, '/'), name)
         )

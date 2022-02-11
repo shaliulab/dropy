@@ -9,6 +9,8 @@ from dropy import DropboxHandler
 from dropy.oauth.official import get_parser
 from dropy.web_utils import set_server, format_to_dropbox_api
 from dropy.constants import DROPBOX_PREFIX, REMOTE_SEP
+from dropy.upload import upload_folder
+from dropy.updown.updown import upload
 
 logger = logging.getLogger(__name__)
 logging.getLogger("dropy.updown.utils").setLevel(logging.DEBUG)
@@ -52,14 +54,39 @@ def sync():
         data.pop("dest"),
     )
 
-    # to download
-    dbx.sync(
-        fullname,
-        folder,
-        subfolder,
-        direction=direction,
-        **data
-    )
+    if direction == "down":
+
+        # to download
+        dbx.sync(
+            fullname,
+            folder,
+            subfolder,
+            direction=direction,
+            **data
+        )
+    
+    elif direction == "up":
+        if os.path.isdir(fullname):
+            upload_folder(
+                dbx.dbx,
+                fullname,
+                folder,
+                subfolder=subfolder,
+            )
+        
+        elif os.path.isfile(fullname):
+
+            upload(
+                dbx.dbx,
+                fullname,
+                folder=folder,
+                subfolder=subfolder,
+                name=os.path.basename(fullname),
+                overwrite=True,
+                shared=False
+            )
+
+
 
 
 @api.post("/list_folder")
