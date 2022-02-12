@@ -3,6 +3,7 @@ import logging
 import datetime
 import time
 import dropbox
+import tqdm
 from .utils import stopwatch, format_path
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def download_shared_(dbx, folder, subfolder, name):
     logger.info(len(data), 'bytes')
     logger.debug('md:', md)
     return data
-    
+
 
 
 def download_(dbx, folder, subfolder, name):
@@ -39,7 +40,7 @@ def download_(dbx, folder, subfolder, name):
         subfolder (str):
         name (str):
 
-    
+
     Return:
         Bytes of the file, or None if the file does not exist.
     """
@@ -58,7 +59,7 @@ def download_(dbx, folder, subfolder, name):
 
         except dropbox.exceptions.ApiError as err:
             import ipdb; ipdb.set_trace()
-        
+
         except Exception as err:
             import ipdb; ipdb.set_trace()
 
@@ -68,7 +69,7 @@ def download_(dbx, folder, subfolder, name):
             logger.info(len(data), 'bytes')
             logger.debug('md:', md)
             return data
-        
+
         return None
 
 
@@ -80,14 +81,19 @@ def download(dbx, folder, subfolder, name, shared=False):
         return download_(dbx, folder, subfolder, name)
 
 
+
+def get_current_percents(f, file_size):
+    return int(100 * (f.tell() / file_size))
+
+
 def upload_(dbx, fullname, folder, subfolder, name, overwrite=False):
 
     file_path = fullname
 
-    f = open(file_path)
+    f = open(file_path, "rb", buffering=0)
     file_size = os.path.getsize(file_path)
 
-    CHUNK_SIZE = 4 * 1024 * 1024
+    CHUNK_SIZE = 140 * 1024 * 1024
 
     dest_path = format_path(
         '/%s/%s/%s' % (folder, subfolder.replace(os.path.sep, '/'), name)
@@ -101,6 +107,8 @@ def upload_(dbx, fullname, folder, subfolder, name, overwrite=False):
                                                 offset=f.tell())
         commit = dropbox.files.CommitInfo(path=dest_path)
 
+        pbar = tqdm.tqdm(total=100, desc="Progress %")
+
         while f.tell() < file_size:
             if ((file_size - f.tell()) <= CHUNK_SIZE):
                 dbx.files_upload_session_finish(f.read(CHUNK_SIZE),
@@ -111,6 +119,9 @@ def upload_(dbx, fullname, folder, subfolder, name, overwrite=False):
                                                 cursor.session_id,
                                                 cursor.offset)
                 cursor.offset = f.tell()
+
+            cur_perc = get_current_percents(f, file_size)
+            pbar.update(cur_perc - pbar.n)
 
     f.close()
 

@@ -7,7 +7,7 @@ print(packages)
 
 setup(
     name=PACKAGE_NAME,
-    version='0.1.0',
+    version='1.0.1',
     packages=packages,
     install_requires=[
         "dropbox",
@@ -18,6 +18,7 @@ setup(
         "joblib",
         "numpy",
         "pandas",
+        "tqdm",
         "ipdb",
     ],
     entry_points={
