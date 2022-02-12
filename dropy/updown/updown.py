@@ -80,8 +80,41 @@ def download(dbx, folder, subfolder, name, shared=False):
         return download_(dbx, folder, subfolder, name)
 
 
-
 def upload_(dbx, fullname, folder, subfolder, name, overwrite=False):
+
+    file_path = fullname
+
+    f = open(file_path)
+    file_size = os.path.getsize(file_path)
+
+    CHUNK_SIZE = 4 * 1024 * 1024
+
+    dest_path = format_path(
+        '/%s/%s/%s' % (folder, subfolder.replace(os.path.sep, '/'), name)
+    )
+
+    if file_size <= CHUNK_SIZE:
+        dbx.files_upload(f.read(), dest_path)
+    else:
+        upload_session_start_result = dbx.files_upload_session_start(f.read(CHUNK_SIZE))
+        cursor = dropbox.files.UploadSessionCursor(session_id=upload_session_start_result.session_id,
+                                                offset=f.tell())
+        commit = dropbox.files.CommitInfo(path=dest_path)
+
+        while f.tell() < file_size:
+            if ((file_size - f.tell()) <= CHUNK_SIZE):
+                dbx.files_upload_session_finish(f.read(CHUNK_SIZE),
+                                                cursor,
+                                                commit)
+            else:
+                dbx.files_upload_session_append(f.read(CHUNK_SIZE),
+                                                cursor.session_id,
+                                                cursor.offset)
+                cursor.offset = f.tell()
+
+    f.close()
+
+def upload_small(dbx, fullname, folder, subfolder, name, overwrite=False):
 
         path = format_path(
             '/%s/%s/%s' % (folder, subfolder.replace(os.path.sep, '/'), name)
