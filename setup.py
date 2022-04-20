@@ -30,6 +30,7 @@ setup(
             'dropy-interactive=dropy.bin.dropy_interactive:main',
             'dropy-ethoscope=dropy.bin.ethoscope.dropy:main',
             'dropy-flyhostel=dropy.bin.flyhostel.dropy:main',
+            'dropy-update-token=dropy.bin.update_token:main',
         ]
     },
     setup_requires=['flake8'],

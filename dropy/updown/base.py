@@ -256,6 +256,7 @@ def sync_file_(
         except Exception as error:
             logger.warning(error)
             logger.warning(traceback.print_exc())
+            import ipdb; ipdb.set_trace()
             raise Exception(f"Could not query {path} to get a listing for {fullname}")
 
 

@@ -6,6 +6,7 @@ import argparse
 import json
 import dropbox
 from dropbox import DropboxOAuth2FlowNoRedirect
+from dropy.constants import CONFIG_FILE
 
 '''
 This example walks through a basic oauth flow using the existing long-lived token type
@@ -63,7 +64,7 @@ def get_credentials(args):
 
 
 def get_access_token(*args, **kwargs):
-    with open("/etc/dropbox.conf", "r") as filehandle:
+    with open(CONFIG_FILE, "r") as filehandle:
         token = json.load(filehandle)["token"]
     return token
 

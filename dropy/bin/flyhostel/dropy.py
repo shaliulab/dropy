@@ -74,8 +74,6 @@ def build_paths(
     include_imgstore=True,
 ):
 
-    import ipdb; ipdb.set_trace()
-
     remote_files = [
         os.path.join(folder, "metadata.yaml"),
     ]
@@ -149,8 +147,6 @@ def main(ap=None, args=None):
     remote_files, local_files = build_paths(
         **kwargs
     )
-
-    import ipdb; ipdb.set_trace()
 
     sync_files(remote_files, local_files, ncores)
 
