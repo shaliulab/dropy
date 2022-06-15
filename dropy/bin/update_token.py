@@ -1,6 +1,6 @@
 import json
 import argparse
-from dropy.constants import CONFIG_FILE
+from dropy.utils import load_config, save_config()
 
 def main():
 
@@ -8,14 +8,13 @@ def main():
     ap.add_argument("token", type=str, help="Long term token generated in https://www.dropbox.com/developers/apps/info/")
     args = ap.parse_args()
 
-    with open(CONFIG_FILE, "r") as filehandle:
-        data = json.load(filehandle)
+    config = load_config()
 
-    print(f"Old token: {data['token']}")
-    data["token"] = args.token
 
-    with open(CONFIG_FILE, "w") as filehandle:
-        json.dump(data, filehandle)
+    print(f"Old token: {config['token']}")
+    config["token"] = args.token
+
+    save_config(config)
 
 if __name__ == "__main__":
     main()

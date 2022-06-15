@@ -12,7 +12,7 @@ LIMIT = 500
 
 class DropboxHandler(SyncMixin):
 
-    def __init__(self, app_key, app_secret):
+    def __init__(self, app_key=None, app_secret=None):
         self._dropbox_handle = None
         self._current_account = None
         self._app_key = app_key

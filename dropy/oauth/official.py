@@ -3,10 +3,9 @@
 # Based on https://raw.githubusercontent.com/dropbox/dropbox-sdk-python/main/example/oauth/commandline-oauth.py
 
 import argparse
-import json
 import dropbox
 from dropbox import DropboxOAuth2FlowNoRedirect
-from dropy.constants import CONFIG_FILE
+from dropy.utils import load_config
 
 '''
 This example walks through a basic oauth flow using the existing long-lived token type
@@ -64,8 +63,7 @@ def get_credentials(args):
 
 
 def get_access_token(*args, **kwargs):
-    with open(CONFIG_FILE, "r") as filehandle:
-        token = json.load(filehandle)["token"]
+    token = load_config()["token"]
     return token
 
 def authenticate(**kwargs):

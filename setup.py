@@ -19,7 +19,6 @@ setup(
         "numpy",
         "pandas",
         "tqdm",
-        "ipdb",
     ],
     entry_points={
         'console_scripts': [
@@ -31,6 +30,7 @@ setup(
             'dropy-ethoscope=dropy.bin.ethoscope.dropy:main',
             'dropy-flyhostel=dropy.bin.flyhostel.dropy:main',
             'dropy-update-token=dropy.bin.update_token:main',
+            'dropy-list=dropy.bin.flyhostel.list:main',
         ]
     },
     setup_requires=['flake8'],
