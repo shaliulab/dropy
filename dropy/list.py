@@ -18,5 +18,5 @@ class DropboxLister:
         self.close()
 
 
-    def file_exists(self, file):
+    async def file_exists(self, file):
         return file_exists(self._dbx, file)

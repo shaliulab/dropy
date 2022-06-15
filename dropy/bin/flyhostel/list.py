@@ -10,6 +10,9 @@ File labeled with NA if an error ocurred in the verification
 import os.path
 import warnings
 import logging
+import asyncio
+import aiofiles
+import signal
 import argparse
 
 import tqdm
@@ -20,7 +23,6 @@ from dropy.utils import load_config
 
 
 logger = logging.getLogger(__name__)
-
 
 try:
     from imgstore.constants import STORE_MD_FILENAME
@@ -107,13 +109,32 @@ def build_file_list(md, chunk):
 
     return files
 
+async def check_file(lister, filehandle, file):
 
-def main():
+    async with aiofiles.open(OUTPUT_FILE, "a") as filehandle:
+        try:
+            found=await lister.file_exists(file)
+            if found:
+                message = f"{file}\tOK\n"
+            else:
+                message = f"{file}\tMISSING\n"
+        except Exception as error:
+            logger.error(error)
+            message = f"{file}\tNA\n"
+
+        await filehandle.write(message)
+        await filehandle.flush()
+
+async def _main():
     ap = get_parser()
     args = ap.parse_args()
+    loop = asyncio.get_event_loop()
 
     if os.path.exists(OUTPUT_FILE):
         warnings.warn(f"{OUTPUT_FILE} exists, overwriting", stacklevel=2)
+        with open(OUTPUT_FILE, "w") as filehandle:
+            filehandle.write("")
+
 
     assert os.path.isdir(args.input)
 
@@ -127,15 +148,19 @@ def main():
 
     file_list=[f"{ROOT_PATH}/{experiment}/{file}" for file in file_list]
 
-    with DropboxLister() as lister:
+    coros=[]
 
-        with open(OUTPUT_FILE, "w") as filehandle:
-            for file in tqdm.tqdm(file_list):
-                try:
-                    if lister.file_exists(file):
-                        filehandle.write(f"{file}\tOK\n")
-                    else:
-                        filehandle.write(f"{file}\tMISSING\n")
-                except Exception as error:
-                    logger.error(error)
-                    filehandle.write(f"{file}\tNA\n")
+    with DropboxLister() as lister:
+        for file in file_list:
+            coros.append(check_file(lister, filehandle, file))
+
+    for i in range(0, len(coros), 10):
+        try:
+            await asyncio.gather(*(coros[i:min(i+10, len(coros))]))
+        except KeyboardInterrupt:
+            loop.close()
+            return
+
+
+def main():
+    asyncio.run(_main())
