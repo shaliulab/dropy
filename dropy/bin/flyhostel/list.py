@@ -12,15 +12,13 @@ import warnings
 import logging
 import asyncio
 import aiofiles
-import signal
 import argparse
-
-import tqdm
+import datetime
 import yaml
 
 from dropy.list import DropboxLister
 from dropy.utils import load_config
-
+from dropbox_content_hasher.hash_file import hash_file
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +32,7 @@ except Exception as error:
 
 config=load_config()
 
-ROOT_PATH=config["root_path"]
+REMOTE_ROOT_PATH=config["remote_root_path"]
 OUTPUT_FILE="dropbox_status.txt"
 STORE_ENTRY="__store"
 
@@ -42,6 +40,7 @@ def get_parser():
 
     ap=argparse.ArgumentParser()
     ap.add_argument("-i", "--input", required=True, type=str, help="Path to flyhostel experiment")
+    ap.add_argument("-r", "--root", required=True, type=str, help="Absolute path to local root folder")
     return ap
 
 def read_metadata(input):
@@ -109,21 +108,35 @@ def build_file_list(md, chunk):
 
     return files
 
-async def check_file(lister, filehandle, file):
+async def check_file(lister, filehandle, file, root):
 
     async with aiofiles.open(OUTPUT_FILE, "a") as filehandle:
         try:
-            found=await lister.file_exists(file)
-            if found:
-                message = f"{file}\tOK\n"
+            remote_metadata=await lister.get_metadata(file)
+            if remote_metadata:
+                server_modified=remote_metadata.server_modified.strftime("%Y-%m-%d_%H-%M-%S")
+                message = "\t".join([file, remote_metadata.content_hash, server_modified])
             else:
-                message = f"{file}\tMISSING\n"
+                message = "\t".join([file, "MISSING", "MISSING"])
         except Exception as error:
             logger.error(error)
-            message = f"{file}\tNA\n"
+            message = "\t".join([file, "NA", "NA"])
+        
+        message+="\t"
+        local_file = file.replace(REMOTE_ROOT_PATH, root)
+        if os.path.exists(local_file):
+            hash_code = hash_file(local_file)
+            timestamp = os.path.getmtime(local_file)
+            client_modified=datetime.datetime.fromtimestamp(timestamp)
+            client_modified=client_modified.strftime("%Y-%m-%d_%H-%M-%S")
+            message+="\t".join([hash_code, client_modified])
+        else:
+            message+="\t".join(["MISSING", "MISSING"])
 
+        message+="\n"
         await filehandle.write(message)
         await filehandle.flush()
+
 
 async def _main():
     ap = get_parser()
@@ -137,6 +150,7 @@ async def _main():
 
 
     assert os.path.isdir(args.input)
+    assert os.path.isabs(args.root[0]), f"{args.root} is not absolute. Please pass an absolute path instead"
 
     experiment = os.path.sep.join(args.input.split(os.path.sep)[::-1][:2][::-1])
 
@@ -146,13 +160,13 @@ async def _main():
     for chunk in range(*md["interval"]):
         file_list += build_file_list(md, chunk)
 
-    file_list=[f"{ROOT_PATH}/{experiment}/{file}" for file in file_list]
+    file_list=[f"{REMOTE_ROOT_PATH}/{experiment}/{file}" for file in file_list]
 
     coros=[]
 
     with DropboxLister() as lister:
         for file in file_list:
-            coros.append(check_file(lister, filehandle, file))
+            coros.append(check_file(lister, filehandle, file, root=args.root))
 
     for i in range(0, len(coros), 10):
         try:

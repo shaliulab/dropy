@@ -16,24 +16,33 @@ def save_config(config):
     with open(CONFIG_FILE, "w") as filehandle:
             json.dump(config, filehandle)
 
-def file_exists(dbx, file):
+def get_metadata(dbx, file):
     try:
         logger.debug(f"files/get_metadata {file}")
-        returns = dbx.dbx.files_get_metadata(file, include_deleted=False)
+        response = dbx.dbx.files_get_metadata(file, include_deleted=False)
     except Exception as error:
-        returns = error
+        response = error
     
-    if type(returns) is dropbox.exceptions.ApiError:
+    if type(response) is dropbox.exceptions.ApiError:
         # there was an error in the request
-
-        if returns.error._value.is_not_found():
+        if response.error._value.is_not_found():
             warnings.warn(f"{file} is not found in Dropbox server", stacklevel=2)
-        elif returns.error._value.is_malformed_path():
+        elif response.error._value.is_malformed_path():
             warnings.warn(f"{file} is a malformed path", stacklevel=2)
         return False
 
-    elif type(returns) is dropbox.files.FileMetadata:
-        return True
+    elif type(response) is dropbox.files.FileMetadata:
+        return response
     
     else:
-        raise Exception(f"files_get_metadata request on {file} had an unexpected return value {returns}")
+        raise Exception(f"files_get_metadata request on {file} had an unexpected return value {response}")
+
+
+def file_exists(dbx, file):
+
+    metadata=get_metadata(dbx, file)
+
+    if type(metadata) is dropbox.files.FileMetadata:
+        return metadata
+    else:
+        return False
