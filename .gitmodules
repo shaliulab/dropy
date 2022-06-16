@@ -1,0 +1,3 @@
+[submodule "dropbox-api-content-hasher"]
+	path = dropbox-api-content-hasher
+	url = git@github.com:dropbox/dropbox-api-content-hasher
